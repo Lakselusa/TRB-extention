@@ -1,0 +1,7 @@
+{
+  "url": "https://YOUR_HOSTED_DOMAIN/trimble-trb-exporter/index.html",
+  "title": "TRB Exporter",
+  "icon": "https://YOUR_HOSTED_DOMAIN/trimble-trb-exporter/icon.png",
+  "infoUrl": "https://YOUR_HOSTED_DOMAIN/trimble-trb-exporter/help.html",
+  "description": "Export multiple visible IFC and model files from the 3D Viewer as a combined TrimBIM (.trb) file."
+}
