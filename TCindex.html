@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrimBIM Tools — Trimble Connect Extension</title>
+<meta name="description" content="A Trimble Connect 3D Viewer extension that exports the current view as a combined .trb TrimBIM file, directly from the browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧊</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --bg-2: #11151f;
+    --surface: #161b27;
+    --surface-2: #1d2231;
+    --border: #252b3d;
+    --border-bright: #353c52;
+    --text: #e8ebf2;
+    --text-dim: #8d94a8;
+    --text-muted: #565d72;
+    --accent: #5b9bff;
+    --accent-2: #4ee3a3;
+    --accent-warm: #ffc857;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(91, 155, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(78, 227, 163, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 30% 100%, rgba(255, 200, 87, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  main { position: relative; z-index: 1; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 40px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 16px rgba(91, 155, 255, .25);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+
+  .nav-links a {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color .15s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none !important;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 80px 40px 100px;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--accent);
+    background: rgba(91, 155, 255, .08);
+    border: 1px solid rgba(91, 155, 255, .15);
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(40px, 6vw, 68px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent-2);
+    background: linear-gradient(120deg, var(--accent-2), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero p {
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 520px;
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 13px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #4080ee);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(91, 155, 255, .3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(91, 155, 255, .4);
+  }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+  }
+
+  .btn-ghost:hover { background: var(--surface-2); }
+
+  /* ── HERO VISUAL ── */
+  .hero-visual {
+    position: relative;
+    aspect-ratio: 1;
+    max-width: 480px;
+    margin-left: auto;
+  }
+
+  .visual-card {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    overflow: hidden;
+  }
+
+  .v1 {
+    top: 0; left: 0;
+    width: 70%; height: 60%;
+    transform: rotate(-3deg);
+    z-index: 2;
+  }
+
+  .v2 {
+    bottom: 0; right: 0;
+    width: 60%; height: 55%;
+    transform: rotate(4deg);
+    z-index: 1;
+  }
+
+  .v-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .v-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .v-dot:nth-child(1) { background: #ff5f56; }
+  .v-dot:nth-child(2) { background: #ffbd2e; }
+  .v-dot:nth-child(3) { background: #27c93f; }
+
+  .v-content {
+    padding: 16px;
+  }
+
+  .v-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .v-row:last-child { border-bottom: none; }
+
+  .v-chk {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .v-name {
+    flex: 1;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .v-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--accent-2);
+    background: rgba(78, 227, 163, .1);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .v-export-btn {
+    margin-top: 10px;
+    background: linear-gradient(135deg, #059669, var(--accent-2));
+    color: #fff;
+    text-align: center;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── SECTION ── */
+  section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(32px, 4.5vw, 48px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin-bottom: 16px;
+    max-width: 720px;
+  }
+
+  .section-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+
+  .section-sub {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 620px;
+    margin-bottom: 56px;
+  }
+
+  /* ── FEATURES ── */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    transition: all .25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature:hover {
+    border-color: var(--border-bright);
+    transform: translateY(-2px);
+  }
+
+  .feature-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(91, 155, 255, .15), rgba(78, 227, 163, .1));
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    color: var(--accent);
+  }
+
+  .feature h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+
+  .feature p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ── INSTALL STEPS ── */
+  .install-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: start;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 20px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .step-content h4 {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .step-content p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .install-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    position: sticky;
+    top: 24px;
+  }
+
+  .install-card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .install-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .url-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-2);
+    word-break: break-all;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .copy-btn {
+    width: 100%;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    padding: 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .copy-btn:hover { background: var(--border); }
+  .copy-btn.copied { color: var(--accent-2); border-color: var(--accent-2); }
+
+  .install-card .small {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    padding: 32px 40px;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+    margin-left: 20px;
+  }
+
+  footer a:hover { color: var(--text); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    nav { padding: 20px; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 40px 20px 60px; gap: 40px; }
+    .hero-visual { max-width: 360px; margin: 0 auto; }
+    section { padding: 60px 20px; }
+    .features { grid-template-columns: 1fr; }
+    .install-grid { grid-template-columns: 1fr; gap: 40px; }
+    .install-card { position: static; }
+    footer { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-mark">🧊</div>
+    TrimBIM Tools
+  </div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/Lakselusa/Tc-trimbim-extension" class="nav-cta">⌘ GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-tag">Trimble Connect 3D Extension</div>
+    <h1>Export the<br>current view <em>as .trb</em>.</h1>
+    <p>A lightweight extension for the Trimble Connect 3D Viewer that bundles your loaded IFC models into a single TrimBIM file — straight from the browser. No desktop app required.</p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">
+        Install in Trimble Connect
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="https://github.com/Lakselusa/Tc-trimbim-extension" class="btn btn-ghost">
+        View source
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="visual-card v1">
+      <div class="v-header">
+        <div class="v-dot"></div><div class="v-dot"></div><div class="v-dot"></div>
+        <span style="margin-left:8px;">trimbim export</span>
+      </div>
+      <div class="v-content">
+        <div class="v-row"><div class="v-chk"></div><span class="v-name">Architecture.ifc</span><span class="v-tag">LOADED</span></div>
+        <div class="v-row"><div class="v-chk"></div><span class="v-name">Structure.ifc</span><span class="v-tag">LOADED</span></div>
+        <div class="v-row"><div class="v-chk"></div><span class="v-name">MEP_HVAC.ifc</span><span class="v-tag">LOADED</span></div>
+        <div class="v-export-btn">↓ Export 3 models as .trb</div>
+      </div>
+    </div>
+    <div class="visual-card v2">
+      <div class="v-header">
+        <div class="v-dot"></div><div class="v-dot"></div><div class="v-dot"></div>
+        <span style="margin-left:8px;">activity log</span>
+      </div>
+      <div class="v-content" style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;">
+        <div style="color:var(--text-muted);">14:32:01 ✓ Connected</div>
+        <div style="color:var(--text-dim);">14:32:03 Found 3 models</div>
+        <div style="color:var(--accent-2);">14:32:08 ✓ TRB ready (4.2 MB)</div>
+        <div style="color:var(--accent);">14:32:09 ⬇ Downloading...</div>
+        <div style="color:var(--accent-2);">14:32:10 ✓ Done</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">Why this exists</div>
+  <h2 class="section-title">Combine multiple IFCs <em>without leaving the browser</em>.</h2>
+  <p class="section-sub">The Trimble Connect Desktop app can export a combined .trb from multiple loaded models. This extension brings that workflow to the web — same idea, no install.</p>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+      </div>
+      <h3>Lives in the viewer</h3>
+      <p>Installs as a native 3D Viewer extension. Appears in the sidebar alongside layers, todos, and clashes — no context switching.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      </div>
+      <h3>Reads the current view</h3>
+      <p>Uses the Workspace API to access models already loaded and converted to TrimBIM by Trimble Connect's own pipeline.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <h3>One-click export</h3>
+      <p>Pick the models you want to combine, name your file, and download. The browser handles the rest.</p>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="section-label">Get started</div>
+  <h2 class="section-title">Install in <em>three steps</em>.</h2>
+
+  <div class="install-grid">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h4>Open Project Settings</h4>
+          <p>In your Trimble Connect project, navigate to the <strong>Project Settings</strong> page from the left navigation panel.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h4>Add a custom extension</h4>
+          <p>Go to the <strong>Extensions</strong> tab and click <strong>Add custom extension</strong>. Paste the manifest URL on the right into the field.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h4>Open the 3D Viewer</h4>
+          <p>Load some IFC models, then open the <strong>TrimBIM Export</strong> extension from the viewer sidebar. Select your models and click Export.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-card">
+      <div class="install-card-label">Manifest URL</div>
+      <h3>Paste this into Trimble Connect</h3>
+      <div class="url-box" id="urlBox">https://trimbim-tools.xyz/extension-manifest.json</div>
+      <button class="copy-btn" onclick="copyUrl(this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span>Copy URL</span>
+      </button>
+      <p class="small">Requires admin permission on the project. The extension runs entirely in your browser — your model data never leaves the Trimble Connect environment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>© 2026 TrimBIM Tools — Independent project, not affiliated with Trimble Inc.</div>
+  <div>
+    <a href="https://github.com/Lakselusa/Tc-trimbim-extension">GitHub</a>
+    <a href="/extension-manifest.json">Manifest</a>
+    <a href="/tc-trimbim-extension.html">Extension</a>
+  </div>
+</footer>
+
+</main>
+
+<script>
+function copyUrl(btn) {
+  const url = document.getElementById('urlBox').textContent.trim();
+  navigator.clipboard.writeText(url).then(() => {
+    btn.classList.add('copied');
+    btn.querySelector('span').textContent = 'Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.querySelector('span').textContent = 'Copy URL';
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
