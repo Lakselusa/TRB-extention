@@ -1,7 +1,7 @@
 {
-  "url": "https://trimbim-tools.com/extension-manifest.json",
-  "title": "TRB Exporter",
-  "icon": "https://YOUR_HOSTED_DOMAIN/trimble-trb-exporter/icon.png",
-  "infoUrl": "https://YOUR_HOSTED_DOMAIN/trimble-trb-exporter/help.html",
-  "description": "Export multiple visible IFC and model files from the 3D Viewer as a combined TrimBIM (.trb) file."
+  "title": "TrimBIM Export",
+  "description": "Export the current 3D view as a combined .trb TrimBIM file — directly from the browser, no desktop app needed.",
+  "url": "https://trimbim-tools.xyz/tc-trimbim-extension.html",
+  "icon": "",
+  "enabled": true
 }
