@@ -73,7 +73,7 @@ body{display:flex;flex-direction:column}
 <div class="topbar">
   <div class="topbar-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
   <h1>TrimBIM <span>Export</span></h1>
-  <span class="npm-badge">v0.3.33</span>
+  <span class="npm-badge">v0.3.34</span>
   <div class="topbar-status"><div class="status-dot off" id="statusDot"></div><span id="statusLabel">Initializing...</span></div>
 </div>
 <div class="body">
@@ -130,7 +130,7 @@ body{display:flex;flex-direction:column}
 //   import * as Workspace from "trimble-connect-workspace-api"
 const Workspace = TrimbleConnectWorkspace;
 
-let API = null, accessToken = null, projectInfo = null;
+let API = null, accessToken = null, projectInfo = null, regionBaseUrl = null;
 let loadedModels = [], selectedModelIds = new Set();
 const $ = id => document.getElementById(id);
 
@@ -145,19 +145,32 @@ function log(msg, level = '') {
 }
 
 async function init() {
-  log('Initializing trimble-connect-workspace-api...', 'i');
+  log('TrimBIM Export v0.3.34', 'i');
+  log('Connecting to Workspace API...', 'i');
   try {
     API = await Workspace.connect(window.parent, function(event, data) { handleEvent(event, data); }, 30000);
     log('\u2713 WorkspaceAPI connected', 's');
     setStatus('on', 'Connected');
 
-    try { projectInfo = await API.project.getProject(); log('Project: ' + projectInfo.name, 'i'); } catch(e) { log('project.getProject(): ' + e.message, 'w'); }
+    // Get project info
+    try {
+      projectInfo = await API.project.getProject();
+      log('Project: ' + projectInfo.name + ' (id: ' + projectInfo.id + ')', 'i');
+      // Log all project properties to find the region URL
+      log('Project data: ' + JSON.stringify(projectInfo).substring(0, 200), '');
+    } catch(e) { log('project.getProject(): ' + e.message, 'w'); }
 
+    // Get access token
     try {
       var result = await API.extension.requestPermission('accesstoken');
       if (result && result !== 'pending' && result !== 'denied') { accessToken = result; log('\u2713 Access token acquired', 's'); }
       else log('Token: ' + result, 'w');
     } catch(e) { log('requestPermission: ' + e.message, 'w'); }
+
+    // Discover region API base URL
+    if (accessToken) {
+      await discoverRegion();
+    }
 
     await refreshModels();
   } catch(err) {
@@ -166,6 +179,73 @@ async function init() {
     setStatus('off', 'Demo mode');
     loadDemoModels();
   }
+}
+
+async function discoverRegion() {
+  log('Discovering API region...', 'i');
+  try {
+    // Step 1: Try the regions endpoint
+    var regResp = await fetch('https://app.connect.trimble.com/tc/api/2.0/regions', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    });
+    if (regResp.ok) {
+      var regions = await regResp.json();
+      log('Available regions: ' + regions.map(function(r) { return r.name || r.id; }).join(', '), 'i');
+
+      // Try to match the project's region
+      if (projectInfo && projectInfo.location) {
+        var match = regions.find(function(r) {
+          return (r.id || '').indexOf(projectInfo.location) >= 0 ||
+                 (r.name || '').toLowerCase().indexOf(projectInfo.location) >= 0;
+        });
+        if (match && match.origin) {
+          regionBaseUrl = match.origin + '/tc/api/2.0';
+          log('\u2713 Region: ' + regionBaseUrl, 's');
+          return;
+        }
+      }
+
+      // Try each region to find the project
+      for (var i = 0; i < regions.length; i++) {
+        var r = regions[i];
+        if (!r.origin) continue;
+        try {
+          var testUrl = r.origin + '/tc/api/2.0/projects/' + projectInfo.id;
+          var testResp = await fetch(testUrl, {
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+          });
+          if (testResp.ok) {
+            regionBaseUrl = r.origin + '/tc/api/2.0';
+            log('\u2713 Found project in region: ' + r.origin, 's');
+            return;
+          }
+        } catch(e) { /* try next */ }
+      }
+    }
+  } catch(e) {
+    log('Region discovery: ' + e.message, 'w');
+  }
+
+  // Fallback: guess from project location or try common URLs
+  var guesses = [
+    'https://app.connect.trimble.com/tc/api/2.0',
+    'https://europe.tcweb.tekla.com/tc/api/2.0',
+    'https://app.europe.connect.trimble.com/tc/api/2.0',
+    'https://asia.tcweb.tekla.com/tc/api/2.0'
+  ];
+  for (var g = 0; g < guesses.length; g++) {
+    try {
+      var gResp = await fetch(guesses[g] + '/projects/' + projectInfo.id, {
+        headers: { 'Authorization': 'Bearer ' + accessToken }
+      });
+      if (gResp.ok) {
+        regionBaseUrl = guesses[g];
+        log('\u2713 Region (guessed): ' + regionBaseUrl, 's');
+        return;
+      }
+    } catch(e) { /* try next */ }
+  }
+  log('Could not determine region API URL', 'w');
 }
 
 function handleEvent(event, data) {
@@ -334,32 +414,34 @@ async function doExport() {
         }
       }
 
-      // Method 3: Use the access token to fetch file content
-      // Use the TC API proxy that runs within the same origin as the viewer
-      if (!trbData && accessToken) {
+      // Method 3: Download via TC REST API (with discovered region)
+      if (!trbData && accessToken && regionBaseUrl) {
+        var fid = model.fileId || model.id;
         try {
-          var fid = model.fileId || model.id;
-          // Try fetching through the TC web app's own proxy (same origin, avoids CORS)
-          var proxyUrls = [
-            '/tc/api/2.0/files/' + fid + '/content',
-            '/tc/api/2.0/files/' + fid + '/trimbim'
-          ];
-          for (var u = 0; u < proxyUrls.length; u++) {
-            try {
-              log('  Trying: ' + proxyUrls[u], '');
-              var resp2 = await fetch(proxyUrls[u], {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-              });
-              if (resp2.ok) {
-                trbData = await resp2.blob();
-                if (trbData.size > 0) {
-                  log('  \u2713 Proxy download (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's');
-                  break;
-                } else { trbData = null; }
-              }
-            } catch(e3) { /* try next URL */ }
+          // Try downloading the file content directly
+          var contentUrl = regionBaseUrl + '/files/' + fid + '/content';
+          log('  GET ' + contentUrl.substring(contentUrl.indexOf('/tc/')), '');
+          var resp2 = await fetch(contentUrl, {
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+          });
+          if (resp2.ok) {
+            trbData = await resp2.blob();
+            log('  \u2713 Downloaded file (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's');
+          } else {
+            log('  HTTP ' + resp2.status + ' - trying /trimbim...', 'w');
+            // Try the trimbim endpoint
+            var trbUrl = regionBaseUrl + '/files/' + fid + '/trimbim';
+            var resp3 = await fetch(trbUrl, {
+              headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            if (resp3.ok) {
+              trbData = await resp3.blob();
+              log('  \u2713 Downloaded TRB (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's');
+            } else {
+              log('  /trimbim: HTTP ' + resp3.status, 'w');
+            }
           }
-        } catch(e) { log('  Proxy: ' + e.message, 'w'); }
+        } catch(e) { log('  REST download: ' + e.message, 'w'); }
       }
 
       // Method 4: Try addTrimbimModel with trbBlobFromId to force blob retrieval
