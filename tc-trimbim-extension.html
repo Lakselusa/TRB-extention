@@ -182,47 +182,79 @@ async function refreshModels() {
     var allModels = await API.viewer.getModels();
     log(allModels.length + ' models in file tree', '');
 
-    // Debug: log all unique states so we know what TC actually uses
+    // Debug: log all states and first few model details
     var states = {};
     allModels.forEach(function(m) { states[m.state] = (states[m.state] || 0) + 1; });
-    var stateStr = Object.keys(states).map(function(s) { return s + ':' + states[s]; }).join(', ');
-    log('Model states: ' + stateStr, 'i');
+    log('States: ' + JSON.stringify(states), 'i');
+
+    // Log first 3 models for debugging ID format
+    allModels.slice(0, 3).forEach(function(m) {
+      log('  File: ' + m.name + ' | id:' + (m.id||'').substring(0,12) + ' | state:' + m.state, '');
+    });
 
     // Step 2: Get TrimBIM models — these ARE the loaded/visible models
     var trbModels = [];
-    try { trbModels = await API.viewer.getTrimbimModels(); log('getTrimbimModels() \u2192 ' + trbModels.length + ' TRB blobs', 'i'); }
-    catch(e) { log('getTrimbimModels: ' + e.message, 'w'); }
+    try {
+      trbModels = await API.viewer.getTrimbimModels();
+      log('getTrimbimModels() \u2192 ' + trbModels.length, 'i');
+      // Log first TRB model for debugging
+      if (trbModels.length > 0) {
+        var t0 = trbModels[0];
+        log('  TRB[0] id:' + (t0.id||'').substring(0,12) + ' hasBlob:' + !!(t0.trbBlob) + ' visible:' + t0.visible, '');
+      }
+    } catch(e) { log('getTrimbimModels: ' + e.message, 'w'); }
 
-    // Step 3: Build model list using BOTH sources
-    // Strategy: Use getTrimbimModels() as primary (they are definitely loaded),
-    // then also include any models with state containing "load" (case-insensitive)
+    // Step 3: Build model list
+    // The TRB model IDs may differ from file-tree model IDs.
+    // Try to match by ID first, then by partial match / index.
     var modelMap = {};
 
-    // First, add all TRB models (these are definitely loaded and have blob data)
-    trbModels.forEach(function(trb) {
-      var meta = allModels.find(function(m) { return m.id === trb.id; });
+    // Create a lookup of file-tree models by ID for quick matching
+    var fileById = {};
+    allModels.forEach(function(m) { fileById[m.id] = m; });
+
+    trbModels.forEach(function(trb, idx) {
+      // Try exact ID match first
+      var meta = fileById[trb.id];
+
+      // If no match, try matching by trbBlobFromId
+      if (!meta && trb.trbBlobFromId) {
+        meta = fileById[trb.trbBlobFromId];
+      }
+
+      // Build a readable name
+      var name;
+      if (meta && meta.name) {
+        name = meta.name;
+      } else {
+        // Use the trb id but make it readable
+        name = 'Model ' + (idx + 1) + ' (' + (trb.id || '').substring(0, 8) + ')';
+      }
+
       modelMap[trb.id] = {
         id: trb.id,
-        name: meta ? meta.name : ('Model ' + trb.id.substring(0, 8)),
+        name: name,
         versionId: meta ? meta.versionId : '',
-        type: meta ? (meta.type || 'IFC') : 'IFC',
+        type: meta ? (meta.type || 'IFC') : 'TRB',
         state: meta ? meta.state : 'TRIMBIM',
         hasTrb: true,
         trbBlob: trb.trbBlob || null,
-        placement: trb.placement || (meta ? meta.placement : null)
+        trbBlobFromId: trb.trbBlobFromId || null,
+        placement: trb.placement || (meta ? meta.placement : null),
+        fileId: meta ? meta.id : null
       };
     });
 
-    // Then, add any models from getModels() that appear loaded but aren't in TRB list yet
-    // Check for various state values: LOADED, loaded, Loaded, VISIBLE, etc.
+    // Also add any file-tree models that are not in TRB list but appear loaded
     allModels.forEach(function(m) {
-      if (modelMap[m.id]) return; // already added from TRB
+      if (modelMap[m.id]) return;
       var s = (m.state || '').toUpperCase();
       if (s === 'LOADED' || s === 'VISIBLE' || s === 'READY' || s === 'ACTIVE') {
         modelMap[m.id] = {
           id: m.id, name: m.name, versionId: m.versionId,
           type: m.type || 'IFC', state: m.state,
-          hasTrb: false, trbBlob: null, placement: m.placement
+          hasTrb: false, trbBlob: null, trbBlobFromId: null,
+          placement: m.placement, fileId: m.id
         };
       }
     });
@@ -255,21 +287,58 @@ async function doExport() {
     try {
       var trbData = model.trbBlob;
 
-      if (!trbData && API) {
-        var trbs = await API.viewer.getTrimbimModels();
-        var match = trbs.find(function(t) { return t.id === model.id; });
-        if (match && match.trbBlob) { trbData = match.trbBlob; log('  \u2713 TRB from viewer', 's'); }
+      // Method 1: Already have blob data cached
+      if (trbData) {
+        log('  \u2713 Using cached TRB blob', 's');
       }
 
-      if (!trbData && API && accessToken) {
+      // Method 2: Re-fetch from getTrimbimModels()
+      if (!trbData && API) {
         try {
-          var fileInfo = await API.viewer.getLoadedModel(model.id);
+          var trbs = await API.viewer.getTrimbimModels();
+          var match = trbs.find(function(t) { return t.id === model.id; });
+          if (match && match.trbBlob) {
+            trbData = match.trbBlob;
+            log('  \u2713 TRB from getTrimbimModels()', 's');
+          }
+        } catch(e) { log('  getTrimbimModels: ' + e.message, 'w'); }
+      }
+
+      // Method 3: Use addTrimbimModel with trbBlobFromId to request blob
+      if (!trbData && API && model.trbBlobFromId) {
+        try {
+          log('  Trying trbBlobFromId: ' + model.trbBlobFromId, '');
+          // This triggers TC to fetch the blob for us
+          var result = await API.viewer.getTrimbimModels();
+          var m2 = result.find(function(t) { return t.id === model.id && t.trbBlob; });
+          if (m2 && m2.trbBlob) {
+            trbData = m2.trbBlob;
+            log('  \u2713 TRB via trbBlobFromId', 's');
+          }
+        } catch(e) { log('  trbBlobFromId: ' + e.message, 'w'); }
+      }
+
+      // Method 4: REST API download using file ID
+      if (!trbData && API && accessToken) {
+        var fid = model.fileId || model.id;
+        try {
+          // Try getLoadedModel first to get proper file ID
+          try {
+            var fileInfo = await API.viewer.getLoadedModel(fid);
+            if (fileInfo && fileInfo.id) fid = fileInfo.id;
+          } catch(e2) { /* use existing fid */ }
+
           var base = 'https://app.connect.trimble.com';
-          if (projectInfo && projectInfo.location === 'eu') base = 'https://app.europe.connect.trimble.com';
-          var url = base + '/tc/api/2.0/files/' + (fileInfo.id || model.id) + '/trimbim';
-          log('  GET ' + url, '');
+          if (projectInfo) {
+            var loc = projectInfo.location || projectInfo.region || '';
+            if (loc.indexOf('eu') >= 0) base = 'https://app.europe.connect.trimble.com';
+            else if (loc.indexOf('asia') >= 0) base = 'https://app.asia.connect.trimble.com';
+          }
+          var url = base + '/tc/api/2.0/files/' + fid + '/trimbim';
+          log('  GET ' + url.substring(0, 60) + '...', '');
           var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + accessToken } });
           if (resp.ok) { trbData = await resp.blob(); log('  \u2713 REST API (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's'); }
+          else { log('  REST: HTTP ' + resp.status, 'w'); }
         } catch(e) { log('  REST: ' + e.message, 'w'); }
       }
 
