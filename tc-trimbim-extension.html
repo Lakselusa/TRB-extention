@@ -276,70 +276,112 @@ async function doExport() {
   log('\u2550\u2550\u2550 EXPORT STARTED \u2550\u2550\u2550', 'i');
   log(selected.length + ' models \u2192 ' + fname + '.trb', 'i');
 
+  // Step 1: Capture visible objects for each model
+  log('Capturing visible objects from current view...', 'i');
+  var visibleObjectsByModel = {};
+  for (var i = 0; i < selected.length; i++) {
+    var model = selected[i];
+    try {
+      // Get visible objects for this model
+      var visObjs = await API.viewer.getObjects(
+        { modelId: model.id },
+        { visible: true }
+      );
+      if (visObjs && visObjs.length > 0) {
+        visibleObjectsByModel[model.id] = visObjs;
+        log('  ' + model.name + ': ' + visObjs.length + ' visible objects', 'i');
+      }
+    } catch(e) {
+      log('  getObjects(' + model.name + '): ' + e.message, 'w');
+    }
+  }
+
+  // Step 2: Try to get TRB data
   var chunks = [];
   for (var i = 0; i < selected.length; i++) {
     var model = selected[i];
-    var progress = Math.round((i / selected.length) * 80);
+    var progress = Math.round(((i + 1) / selected.length) * 80);
     fill.style.width = progress + '%'; pct.textContent = progress + '%';
-    lbl.textContent = 'Fetching ' + model.name + '...';
-    log('Fetching: ' + model.name, '');
+    lbl.textContent = 'Processing ' + model.name + '...';
+    log('Processing: ' + model.name, '');
 
     try {
-      var trbData = model.trbBlob;
+      var trbData = null;
 
-      // Method 1: Already have blob data cached
-      if (trbData) {
-        log('  \u2713 Using cached TRB blob', 's');
+      // Method 1: Check if we have a cached blob
+      if (model.trbBlob) {
+        trbData = model.trbBlob;
+        log('  \u2713 Cached TRB blob', 's');
       }
 
-      // Method 2: Re-fetch from getTrimbimModels()
+      // Method 2: Try to get file content via getLoadedModel
+      if (!trbData) {
+        try {
+          var fileInfo = await API.viewer.getLoadedModel(model.fileId || model.id);
+          log('  getLoadedModel: ' + JSON.stringify({id: fileInfo.id, name: fileInfo.name, size: fileInfo.size}).substring(0, 80), '');
+
+          // Try to download via the file's download URL if available
+          if (fileInfo.downloadUrl) {
+            log('  Downloading via downloadUrl...', '');
+            var resp = await fetch(fileInfo.downloadUrl);
+            if (resp.ok) {
+              trbData = await resp.blob();
+              log('  \u2713 Downloaded (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's');
+            }
+          }
+        } catch(e) {
+          log('  getLoadedModel: ' + e.message, 'w');
+        }
+      }
+
+      // Method 3: Use the access token to fetch file content
+      // Use the TC API proxy that runs within the same origin as the viewer
+      if (!trbData && accessToken) {
+        try {
+          var fid = model.fileId || model.id;
+          // Try fetching through the TC web app's own proxy (same origin, avoids CORS)
+          var proxyUrls = [
+            '/tc/api/2.0/files/' + fid + '/content',
+            '/tc/api/2.0/files/' + fid + '/trimbim'
+          ];
+          for (var u = 0; u < proxyUrls.length; u++) {
+            try {
+              log('  Trying: ' + proxyUrls[u], '');
+              var resp2 = await fetch(proxyUrls[u], {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+              });
+              if (resp2.ok) {
+                trbData = await resp2.blob();
+                if (trbData.size > 0) {
+                  log('  \u2713 Proxy download (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's');
+                  break;
+                } else { trbData = null; }
+              }
+            } catch(e3) { /* try next URL */ }
+          }
+        } catch(e) { log('  Proxy: ' + e.message, 'w'); }
+      }
+
+      // Method 4: Try addTrimbimModel with trbBlobFromId to force blob retrieval
       if (!trbData && API) {
         try {
-          var trbs = await API.viewer.getTrimbimModels();
-          var match = trbs.find(function(t) { return t.id === model.id; });
-          if (match && match.trbBlob) {
-            trbData = match.trbBlob;
-            log('  \u2713 TRB from getTrimbimModels()', 's');
+          log('  Requesting TRB blob from viewer...', '');
+          // Add the model back with a request for its blob
+          var addResult = await API.viewer.addTrimbimModel({
+            id: '_export_' + model.id,
+            trbBlobFromId: model.id,
+            visible: false
+          });
+          // Now try to get it
+          var trbs2 = await API.viewer.getTrimbimModels();
+          var found = trbs2.find(function(t) { return t.id === '_export_' + model.id && t.trbBlob; });
+          if (found && found.trbBlob) {
+            trbData = found.trbBlob;
+            log('  \u2713 TRB via addTrimbimModel', 's');
           }
-        } catch(e) { log('  getTrimbimModels: ' + e.message, 'w'); }
-      }
-
-      // Method 3: Use addTrimbimModel with trbBlobFromId to request blob
-      if (!trbData && API && model.trbBlobFromId) {
-        try {
-          log('  Trying trbBlobFromId: ' + model.trbBlobFromId, '');
-          // This triggers TC to fetch the blob for us
-          var result = await API.viewer.getTrimbimModels();
-          var m2 = result.find(function(t) { return t.id === model.id && t.trbBlob; });
-          if (m2 && m2.trbBlob) {
-            trbData = m2.trbBlob;
-            log('  \u2713 TRB via trbBlobFromId', 's');
-          }
-        } catch(e) { log('  trbBlobFromId: ' + e.message, 'w'); }
-      }
-
-      // Method 4: REST API download using file ID
-      if (!trbData && API && accessToken) {
-        var fid = model.fileId || model.id;
-        try {
-          // Try getLoadedModel first to get proper file ID
-          try {
-            var fileInfo = await API.viewer.getLoadedModel(fid);
-            if (fileInfo && fileInfo.id) fid = fileInfo.id;
-          } catch(e2) { /* use existing fid */ }
-
-          var base = 'https://app.connect.trimble.com';
-          if (projectInfo) {
-            var loc = projectInfo.location || projectInfo.region || '';
-            if (loc.indexOf('eu') >= 0) base = 'https://app.europe.connect.trimble.com';
-            else if (loc.indexOf('asia') >= 0) base = 'https://app.asia.connect.trimble.com';
-          }
-          var url = base + '/tc/api/2.0/files/' + fid + '/trimbim';
-          log('  GET ' + url.substring(0, 60) + '...', '');
-          var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + accessToken } });
-          if (resp.ok) { trbData = await resp.blob(); log('  \u2713 REST API (' + (trbData.size / 1e6).toFixed(1) + ' MB)', 's'); }
-          else { log('  REST: HTTP ' + resp.status, 'w'); }
-        } catch(e) { log('  REST: ' + e.message, 'w'); }
+          // Clean up
+          try { await API.viewer.removeTrimbimModel('_export_' + model.id); } catch(e4) {}
+        } catch(e) { log('  addTrimbimModel: ' + e.message, 'w'); }
       }
 
       if (trbData) {
@@ -350,7 +392,7 @@ async function doExport() {
         else bytes = new Uint8Array(trbData);
         chunks.push({ name: model.name, id: model.id, data: bytes, placement: model.placement });
         log('  \u2713 ' + model.name + ' (' + (bytes.length / 1e6).toFixed(1) + ' MB)', 's');
-      } else { log('  \u26A0 No TRB data', 'w'); }
+      } else { log('  \u26A0 Could not retrieve TRB data for ' + model.name, 'w'); }
     } catch(err) { log('  \u2717 ' + err.message, 'e'); }
     await new Promise(function(r) { setTimeout(r, 100); });
   }
