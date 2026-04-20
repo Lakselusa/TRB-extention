@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrimbimTools — Visibility Filter</title>
+
+  <!-- Trimble Connect Workspace API (IIFE bundle) -->
+  <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c1018;
+      --panel: #111820;
+      --card: #161e2a;
+      --border: #1e2a3a;
+      --border-lit: #2d4a6f;
+      --text: #d4dce8;
+      --text-dim: #5a7089;
+      --text-bright: #f0f4f8;
+      --blue: #2e8cf0;
+      --blue-glow: rgba(46,140,240,0.12);
+      --green: #0dca73;
+      --green-glow: rgba(13,202,115,0.1);
+      --red: #f04848;
+      --red-glow: rgba(240,72,72,0.1);
+      --amber: #e8a820;
+      --amber-glow: rgba(232,168,32,0.1);
+      --mono: 'IBM Plex Mono', Consolas, monospace;
+      --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+      --radius: 6px;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    .header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      background: var(--blue-glow);
+      border: 1px solid rgba(46,140,240,0.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-title {
+      font-size: 14px; font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-bright);
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      margin-top: 1px;
+    }
+    .status-dot {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .status-dot .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+    .status-dot .label {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    /* ── Content ────────────────────────────────── */
+    .content {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 420px;
+    }
+
+    /* ── Section ────────────────────────────────── */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+    }
+    .section-count {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      background: var(--card);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* ── Model row ──────────────────────────────── */
+    .model-row {
+      width: 100%;
+      display: block;
+      text-align: left;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: transparent;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all 0.1s ease;
+      font-family: var(--sans);
+    }
+    .model-row:hover { background: var(--card); }
+    .model-row.selected {
+      border-color: var(--blue);
+      background: var(--blue-glow);
+    }
+    .model-name {
+      font-size: 12px; font-weight: 600;
+      color: var(--text-bright);
+    }
+    .model-id {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 9px; font-weight: 700;
+      font-family: var(--mono);
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      letter-spacing: 0.03em;
+    }
+    .badge.loaded { color: var(--green); background: var(--green-glow); }
+    .badge.loading { color: var(--amber); background: var(--amber-glow); }
+    .badge.unloaded { color: var(--text-dim); background: transparent; }
+
+    /* ── Stats row ──────────────────────────────── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin: 10px 0 8px;
+    }
+    .stat {
+      padding: 8px 6px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 20px; font-weight: 800;
+      font-family: var(--mono);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 9px; font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    /* ── Object card ────────────────────────────── */
+    .object-card {
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .object-model-id {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .object-counts {
+      font-size: 11px;
+      margin-top: 3px;
+    }
+    .id-preview {
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      margin-top: 4px;
+      line-height: 1.4;
+      word-break: break-all;
+      max-height: 36px;
+      overflow: hidden;
+    }
+
+    /* ── Export info ─────────────────────────────── */
+    .export-info {
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .info-row .label { font-size: 11px; color: var(--text-dim); }
+    .info-row .value {
+      font-size: 11px;
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* ── Button ──────────────────────────────────── */
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      margin-top: 6px;
+      letter-spacing: 0.01em;
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+
+    /* ── Log ─────────────────────────────────────── */
+    .log-container {
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .log-line {
+      font-size: 10px;
+      font-family: var(--mono);
+      padding: 3px 6px;
+      border-radius: 3px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .log-line.info { color: var(--text-dim); }
+    .log-line.success { color: var(--green); background: var(--green-glow); }
+    .log-line.warn { color: var(--amber); background: var(--amber-glow); }
+    .log-line.error { color: var(--red); background: var(--red-glow); }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+    .empty {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .status-panel {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 24px; text-align: center;
+    }
+    .status-panel .icon { font-size: 32px; margin-bottom: 12px; }
+    .status-panel .title {
+      font-size: 15px; font-weight: 700;
+      color: var(--text-bright); margin-bottom: 6px;
+    }
+    .status-panel .sub {
+      font-size: 12px; color: var(--text-dim);
+      max-width: 260px; line-height: 1.5;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 4L8 1L14 4V12L8 15L2 12V4Z" stroke="#2e8cf0" stroke-width="1.5" fill="rgba(46,140,240,0.2)" />
+          <path d="M8 1V15" stroke="#2e8cf0" stroke-width="1" opacity="0.4" />
+          <path d="M2 4L14 4" stroke="#2e8cf0" stroke-width="1" opacity="0.4" />
+        </svg>
+      </div>
+      <div>
+        <div class="header-title">TrimbimTools</div>
+        <div class="header-sub" id="projectName">Connecting...</div>
+      </div>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="statusDot" style="background:var(--amber); box-shadow:0 0 6px var(--amber); animation:pulse 1.5s ease-in-out infinite;"></div>
+      <span class="label" id="statusLabel">Connecting</span>
+    </div>
+  </div>
+
+  <!-- ── Content ─────────────────────────────────────────────────────── -->
+  <div class="content" id="mainContent">
+    <div class="status-panel" id="connectingPanel">
+      <div class="icon" style="color:var(--blue); animation:spin 2s linear infinite;">◌</div>
+      <div class="title">Connecting</div>
+      <div class="sub">Establishing connection to Trimble Connect 3D Viewer...</div>
+    </div>
+  </div>
+
+  <!-- ── Ready UI (hidden until connected) ───────────────────────────── -->
+  <template id="readyUI">
+    <!-- Models -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Loaded Models</span>
+        <span class="section-count" id="modelCount">0</span>
+      </div>
+      <div id="modelList"></div>
+    </div>
+
+    <!-- Scan -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Object Visibility</span>
+      </div>
+      <button class="btn" id="btnScan"
+        style="border:1px solid var(--blue); background:var(--blue-glow); color:var(--blue);">
+        Scan Visibility
+      </button>
+      <div id="scanResults" style="display:none;">
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-value" id="statAll" style="color:var(--blue);">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="statVis" style="color:var(--green);">0</div>
+            <div class="stat-label">Visible</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="statHid" style="color:var(--red);">0</div>
+            <div class="stat-label">Hidden</div>
+          </div>
+        </div>
+        <div id="objectBreakdown"></div>
+        <button class="btn" id="btnReset"
+          style="border:1px solid var(--amber); color:var(--amber); background:transparent;">
+          Reset All Visibility
+        </button>
+      </div>
+      <div class="hint" id="scanHint">
+        Hide objects in the 3D viewer (right-click → Hide), then scan to capture which objects are visible.
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Export Filtered TRB</span>
+      </div>
+      <div class="export-info" id="exportInfo">
+        <div class="info-row">
+          <span class="label">Will include</span>
+          <span class="value" id="exportVis" style="color:var(--green);">0 objects</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Will exclude</span>
+          <span class="value" id="exportHid" style="color:var(--red);">0 objects</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Source model</span>
+          <span class="value" id="exportModel" style="color:var(--blue);">—</span>
+        </div>
+      </div>
+      <button class="btn" id="btnExport"
+        style="border:1px solid var(--green); background:var(--green-glow); color:var(--green);" disabled>
+        Scan objects first
+      </button>
+    </div>
+
+    <!-- Log -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Log</span>
+        <span class="section-count" id="logCount">0</span>
+      </div>
+      <div class="log-container" id="logContainer"></div>
+      <button class="btn btn-sm" id="btnClearLog"
+        style="border:1px solid var(--text-dim); color:var(--text-dim); background:transparent; display:none;">
+        Clear
+      </button>
+    </div>
+  </template>
+
+  <!-- ── Main Script ─────────────────────────────────────────────────── -->
+  <script>
+    (async function () {
+      // ── State ────────────────────────────────────────────────────────
+      let API = null;
+      let accessToken = null;
+      let models = [];
+      let selectedModel = null;
+      let visibleObjects = [];
+      let hiddenObjects = [];
+      let allObjects = [];
+      const logEntries = [];
+
+      // ── DOM refs ─────────────────────────────────────────────────────
+      const $content = document.getElementById("mainContent");
+      const $connectingPanel = document.getElementById("connectingPanel");
+      const $projectName = document.getElementById("projectName");
+      const $statusDot = document.getElementById("statusDot");
+      const $statusLabel = document.getElementById("statusLabel");
+
+      // ── Helpers ──────────────────────────────────────────────────────
+      function shortId(id) {
+        if (!id) return "—";
+        return id.length <= 16 ? id : id.slice(0, 8) + "…" + id.slice(-4);
+      }
+
+      function countIds(arr) {
+        return (arr || []).reduce(function (s, m) {
+          return s + (m.objectRuntimeIds ? m.objectRuntimeIds.length : 0);
+        }, 0);
+      }
+
+      function addLog(msg, type) {
+        type = type || "info";
+        var ts = new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit", minute: "2-digit", second: "2-digit"
+        });
+        logEntries.push({ msg: msg, type: type, ts: ts });
+        // Keep max 100
+        if (logEntries.length > 100) logEntries.shift();
+        renderLog();
+      }
+
+      function renderLog() {
+        var $c = document.getElementById("logContainer");
+        var $count = document.getElementById("logCount");
+        var $clear = document.getElementById("btnClearLog");
+        if (!$c) return;
+
+        $count.textContent = logEntries.length;
+        $clear.style.display = logEntries.length > 0 ? "block" : "none";
+
+        $c.innerHTML = logEntries.slice().reverse().map(function (e) {
+          return '<div class="log-line ' + e.type + '">' +
+            '<span style="opacity:0.45">' + e.ts + '</span> ' +
+            escapeHtml(e.msg) +
+            '</div>';
+        }).join("");
+        $c.scrollTop = 0;
+      }
+
+      function escapeHtml(str) {
+        var d = document.createElement("div");
+        d.textContent = str;
+        return d.innerHTML;
+      }
+
+      function setStatus(phase) {
+        var colors = { ready: "var(--green)", error: "var(--red)", connecting: "var(--amber)" };
+        var labels = { ready: "Live", error: "Error", connecting: "Connecting" };
+        $statusDot.style.background = colors[phase] || colors.connecting;
+        $statusDot.style.boxShadow = "0 0 6px " + (colors[phase] || colors.connecting);
+        $statusDot.style.animation = phase === "connecting" ? "pulse 1.5s ease-in-out infinite" : "none";
+        $statusLabel.textContent = labels[phase] || "Unknown";
+      }
+
+      // ── Show ready UI ────────────────────────────────────────────────
+      function showReadyUI() {
+        var template = document.getElementById("readyUI");
+        $content.innerHTML = "";
+        $content.appendChild(template.content.cloneNode(true));
+        bindUI();
+        renderModels();
+      }
+
+      function bindUI() {
+        document.getElementById("btnScan").addEventListener("click", scanObjects);
+        document.getElementById("btnReset").addEventListener("click", resetVisibility);
+        document.getElementById("btnExport").addEventListener("click", exportFilteredTrb);
+        document.getElementById("btnClearLog").addEventListener("click", function () {
+          logEntries.length = 0;
+          renderLog();
+        });
+      }
+
+      // ── Render models ────────────────────────────────────────────────
+      function renderModels() {
+        var $list = document.getElementById("modelList");
+        var $count = document.getElementById("modelCount");
+        if (!$list) return;
+
+        $count.textContent = models.length;
+
+        if (models.length === 0) {
+          $list.innerHTML = '<div class="empty">No models loaded. Open a model in the viewer.</div>';
+          return;
+        }
+
+        $list.innerHTML = models.map(function (m, i) {
+          var isSelected = selectedModel && selectedModel.id === m.id;
+          var stateClass = (m.state || "").toLowerCase();
+          return '<button class="model-row' + (isSelected ? " selected" : "") + '" data-index="' + i + '">' +
+            '<div class="model-name">' + escapeHtml(m.name || shortId(m.id)) + '</div>' +
+            '<div class="model-id">' + escapeHtml(shortId(m.id)) + '</div>' +
+            (m.state ? '<span class="badge ' + stateClass + '">' + m.state + '</span>' : '') +
+            '</button>';
+        }).join("");
+
+        $list.querySelectorAll(".model-row").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var idx = parseInt(btn.getAttribute("data-index"));
+            selectedModel = models[idx];
+            renderModels();
+            updateExportInfo();
+          });
+        });
+      }
+
+      // ── Scan objects ─────────────────────────────────────────────────
+      async function scanObjects() {
+        if (!API) return;
+        var $btn = document.getElementById("btnScan");
+        $btn.textContent = "Scanning...";
+        $btn.disabled = true;
+        addLog("Scanning object visibility in viewer...");
+
+        try {
+          allObjects = (await API.viewer.getObjects()) || [];
+          visibleObjects = (await API.viewer.getObjects(undefined, { visible: true })) || [];
+          hiddenObjects = (await API.viewer.getObjects(undefined, { visible: false })) || [];
+
+          var nAll = countIds(allObjects);
+          var nVis = countIds(visibleObjects);
+          var nHid = countIds(hiddenObjects);
+
+          addLog("Scan complete — " + nAll + " total, " + nVis + " visible, " + nHid + " hidden", "success");
+
+          // Show results
+          document.getElementById("scanResults").style.display = "block";
+          document.getElementById("scanHint").style.display = "none";
+          document.getElementById("statAll").textContent = nAll;
+          document.getElementById("statVis").textContent = nVis;
+          document.getElementById("statHid").textContent = nHid;
+
+          // Per-model breakdown
+          var $breakdown = document.getElementById("objectBreakdown");
+          $breakdown.innerHTML = visibleObjects.map(function (mo, i) {
+            var nv = mo.objectRuntimeIds ? mo.objectRuntimeIds.length : 0;
+            var nh = hiddenObjects[i] && hiddenObjects[i].objectRuntimeIds
+              ? hiddenObjects[i].objectRuntimeIds.length : 0;
+            var preview = mo.objectRuntimeIds
+              ? "[" + mo.objectRuntimeIds.slice(0, 12).join(", ") + (mo.objectRuntimeIds.length > 12 ? " …" : "") + "]"
+              : "";
+            return '<div class="object-card">' +
+              '<div class="object-model-id">' + escapeHtml(shortId(mo.modelId)) + '</div>' +
+              '<div class="object-counts">' +
+                '<span style="color:var(--green)">' + nv + ' visible</span>' +
+                '<span style="color:var(--red); margin-left:8px;">' + nh + ' hidden</span>' +
+              '</div>' +
+              (preview ? '<div class="id-preview">' + escapeHtml(preview) + '</div>' : '') +
+              '</div>';
+          }).join("");
+
+          updateExportInfo();
+        } catch (err) {
+          addLog("Scan failed: " + err.message, "error");
+        } finally {
+          $btn.textContent = "Scan Visibility";
+          $btn.disabled = false;
+        }
+      }
+
+      // ── Reset visibility ─────────────────────────────────────────────
+      async function resetVisibility() {
+        if (!API) return;
+        try {
+          await API.viewer.setObjectState(undefined, { visible: "reset" });
+          addLog("Object visibility reset to defaults", "success");
+          await scanObjects();
+        } catch (err) {
+          addLog("Reset failed: " + err.message, "error");
+        }
+      }
+
+      // ── Update export info ───────────────────────────────────────────
+      function updateExportInfo() {
+        var $vis = document.getElementById("exportVis");
+        var $hid = document.getElementById("exportHid");
+        var $model = document.getElementById("exportModel");
+        var $btn = document.getElementById("btnExport");
+        if (!$vis) return;
+
+        var nVis = countIds(visibleObjects);
+        var nHid = countIds(hiddenObjects);
+        $vis.textContent = nVis + " objects";
+        $hid.textContent = nHid + " objects";
+        $model.textContent = selectedModel
+          ? (selectedModel.name || shortId(selectedModel.id))
+          : "—";
+
+        if (nVis > 0) {
+          $btn.disabled = false;
+          $btn.textContent = "Export " + nVis + " visible objects → TRB";
+        } else {
+          $btn.disabled = true;
+          $btn.textContent = "Scan objects first";
+        }
+      }
+
+      // ── Export filtered TRB ──────────────────────────────────────────
+      async function exportFilteredTrb() {
+        if (!API || visibleObjects.length === 0) {
+          addLog("Nothing to export — scan objects first", "error");
+          return;
+        }
+
+        var $btn = document.getElementById("btnExport");
+        $btn.textContent = "Exporting...";
+        $btn.disabled = true;
+
+        addLog("═══ Starting filtered TRB export ═══");
+
+        try {
+          for (var v = 0; v < visibleObjects.length; v++) {
+            var modelObj = visibleObjects[v];
+            var modelId = modelObj.modelId;
+            var runtimeIds = modelObj.objectRuntimeIds || [];
+
+            if (runtimeIds.length === 0) {
+              addLog("Model " + shortId(modelId) + ": no visible objects, skipping");
+              continue;
+            }
+
+            addLog("Model " + shortId(modelId) + ": " + runtimeIds.length + " visible objects");
+
+            // Convert runtime IDs → external IDs (IFC GUIDs)
+            var externalIds = null;
+            try {
+              externalIds = await API.viewer.convertToObjectIds(modelId, runtimeIds);
+              addLog("Converted " + externalIds.length + " IDs to IFC GUIDs", "success");
+            } catch (err) {
+              addLog("ID conversion skipped: " + err.message, "warn");
+            }
+
+            // Approach 1: addTrimbimModel with selector filter
+            var filteredId = "export_" + modelId.slice(0, 8) + "_" + Date.now();
+            addLog("Adding filtered TRB (" + filteredId + ")...");
+
+            try {
+              var trbResult = await API.viewer.addTrimbimModel({
+                id: filteredId,
+                trbBlobFromId: modelId,
+                visible: true,
+                fitToView: false,
+                selector: {
+                  modelObjectIds: [{
+                    modelId: modelId,
+                    objectRuntimeIds: runtimeIds
+                  }]
+                }
+              });
+              addLog("Filtered TRB loaded: " + JSON.stringify(trbResult), "success");
+            } catch (err) {
+              addLog("addTrimbimModel failed: " + err.message, "error");
+
+              // Approach 2: isolateEntities
+              addLog("Fallback → isolateEntities...");
+              try {
+                await API.viewer.isolateEntities([{
+                  modelId: modelId,
+                  objectRuntimeIds: runtimeIds
+                }]);
+                addLog("isolateEntities succeeded", "success");
+              } catch (err2) {
+                addLog("isolateEntities also failed: " + err2.message, "error");
+              }
+            }
+
+            // Log some external IDs
+            if (externalIds && externalIds.length > 0) {
+              addLog("IFC GUIDs (first 5): " + externalIds.slice(0, 5).join(", ") +
+                (externalIds.length > 5 ? "..." : ""));
+            }
+          }
+
+          // Snapshot
+          try {
+            var snap = await API.viewer.getSnapshot();
+            addLog("Snapshot captured (" + (snap ? snap.length : 0) + " chars)", "success");
+          } catch (e) { /* non-critical */ }
+
+          addLog("═══ Export complete ═══", "success");
+        } catch (err) {
+          addLog("Export error: " + err.message, "error");
+        } finally {
+          updateExportInfo();
+        }
+      }
+
+      // ── Initialize ───────────────────────────────────────────────────
+      try {
+        addLog("Initializing extension — connecting to Trimble Connect...");
+
+        // Connect to parent (Trimble Connect 3D Viewer)
+        API = await TrimbleConnectWorkspace.connect(
+          window.parent,
+          function (event, data) {
+            // Handle token refresh
+            if (event === "extension.accessToken") {
+              accessToken = data && data.data ? data.data : data;
+              addLog("Access token refreshed via event", "success");
+            }
+            // Handle model state changes
+            if (event === "viewer.modelState.changed") {
+              addLog("Model state changed", "info");
+              API.viewer.getModels("LOADED").then(function (m) {
+                models = m || [];
+                renderModels();
+              });
+            }
+          },
+          30000
+        );
+
+        addLog("Connected to Trimble Connect", "success");
+
+        // Request access token
+        addLog("Requesting access token...");
+        var tokenResult = await API.extension.requestPermission("accesstoken");
+        if (tokenResult === "pending") {
+          addLog("Waiting for user to grant permission...", "warn");
+        } else if (tokenResult === "denied") {
+          throw new Error("User denied access token permission");
+        } else {
+          accessToken = tokenResult;
+          addLog("Access token received", "success");
+        }
+
+        // Get project info
+        var project = await API.project.getProject();
+        $projectName.textContent = project ? (project.name || shortId(project.id)) : "Unknown";
+        addLog("Project: " + (project ? project.name || project.id : "unknown"), "success");
+
+        // Get loaded models
+        models = (await API.viewer.getModels("LOADED")) || [];
+        addLog("Loaded models: " + models.length + " file(s)", "success");
+        if (models.length > 0) {
+          selectedModel = models[0];
+        }
+
+        // Switch to ready state
+        setStatus("ready");
+        showReadyUI();
+
+      } catch (err) {
+        addLog("Connection failed: " + err.message, "error");
+        setStatus("error");
+        $connectingPanel.innerHTML =
+          '<div class="icon" style="color:var(--red);">✕</div>' +
+          '<div class="title">Connection Failed</div>' +
+          '<div class="sub">' + escapeHtml(err.message) + '</div>';
+      }
+    })();
+  </script>
+</body>
+</html>
