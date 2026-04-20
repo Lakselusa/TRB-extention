@@ -1,6 +1,5 @@
 {
-  "title": "tc-trimbim-extension",
-  "description": "Export the current 3D view as a combined .trb TrimBIM file — directly from the browser, no desktop app needed.",
   "url": "https://trimbim-tools.xyz/tc-trimbim-extension.html",
-  "icon": "",
+  "title": "TrimbimTools",
+  "icon": "https://trimbim-tools.xyz/favicon.ico"
 }
