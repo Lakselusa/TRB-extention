@@ -7,459 +7,364 @@
   <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0c1018; --panel: #111820; --card: #161e2a;
-      --border: #1e2a3a; --text: #d4dce8; --dim: #5a7089; --bright: #f0f4f8;
-      --blue: #2e8cf0; --green: #0dca73; --red: #f04848; --amber: #e8a820;
-      --mono: 'IBM Plex Mono', Consolas, monospace;
-      --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0c1018;--panel:#111820;--card:#161e2a;
+      --border:#1e2a3a;--text:#d4dce8;--dim:#5a7089;--bright:#f0f4f8;
+      --blue:#2e8cf0;--green:#0dca73;--red:#f04848;--amber:#e8a820;
+      --mono:'IBM Plex Mono',Consolas,monospace;
+      --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
     }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
-    .header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--panel);
-      display: flex; align-items: center; justify-content: space-between; }
-    .header h1 { font-size: 14px; font-weight: 700; color: var(--bright); }
-    .header .sub { font-size: 11px; color: var(--dim); font-family: var(--mono); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-    .content { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-    .section { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
-    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--dim); margin-bottom: 8px; }
-    .btn { width: 100%; padding: 9px 12px; border-radius: 5px; font-family: var(--sans);
-      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.1s; margin-top: 4px; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-blue { border: 1px solid var(--blue); background: rgba(46,140,240,0.1); color: var(--blue); }
-    .btn-green { border: 1px solid var(--green); background: rgba(13,202,115,0.08); color: var(--green); }
-    .btn-amber { border: 1px solid var(--amber); background: rgba(232,168,32,0.08); color: var(--amber); }
-    .btn-dim { border: 1px solid var(--border); background: transparent; color: var(--dim); }
-    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 8px 0; }
-    .stat-box { text-align: center; padding: 6px 4px; border-radius: 5px; border: 1px solid var(--border); }
-    .stat-val { font-size: 18px; font-weight: 800; font-family: var(--mono); }
-    .stat-lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--dim); margin-top: 2px; }
-    .model-item { padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 3px; cursor: pointer; }
-    .model-item:hover { background: var(--card); }
-    .model-item.sel { border-color: var(--blue); background: rgba(46,140,240,0.08); }
-    .model-name { font-size: 12px; font-weight: 600; color: var(--bright); }
-    .model-meta { font-size: 10px; font-family: var(--mono); color: var(--dim); margin-top: 2px; }
-    .obj-card { padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; }
-    .info-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11px; }
-    .info-row .lbl { color: var(--dim); }
-    .info-row .val { font-family: var(--mono); font-weight: 600; }
-    .log-box { max-height: 220px; overflow-y: auto; }
-    .log-line { font-size: 10px; font-family: var(--mono); padding: 2px 5px; border-radius: 3px;
-      line-height: 1.4; word-break: break-word; margin-bottom: 1px; }
-    .log-line.info { color: var(--dim); }
-    .log-line.success { color: var(--green); background: rgba(13,202,115,0.06); }
-    .log-line.warn { color: var(--amber); background: rgba(232,168,32,0.06); }
-    .log-line.error { color: var(--red); background: rgba(240,72,72,0.06); }
-    .hint { font-size: 11px; color: var(--dim); line-height: 1.5; padding: 7px 9px;
-      border: 1px dashed var(--border); border-radius: 5px; margin-top: 6px; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+    .hdr{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;align-items:center;justify-content:space-between}
+    .hdr h1{font-size:14px;font-weight:700;color:var(--bright)}
+    .hdr .sub{font-size:11px;color:var(--dim);font-family:var(--mono)}
+    .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+    .cnt{padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+    .sec{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+    .sec-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:8px}
+    .btn{width:100%;padding:9px 12px;border-radius:5px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .1s;margin-top:4px}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-b{border:1px solid var(--blue);background:rgba(46,140,240,.1);color:var(--blue)}
+    .btn-g{border:1px solid var(--green);background:rgba(13,202,115,.08);color:var(--green)}
+    .btn-a{border:1px solid var(--amber);background:rgba(232,168,32,.08);color:var(--amber)}
+    .btn-d{border:1px solid var(--border);background:transparent;color:var(--dim)}
+    .sts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin:8px 0}
+    .st{text-align:center;padding:6px 4px;border-radius:5px;border:1px solid var(--border)}
+    .st-v{font-size:18px;font-weight:800;font-family:var(--mono)}
+    .st-l{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-top:2px}
+    .mi{padding:7px 9px;border:1px solid var(--border);border-radius:5px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+    .mi .ic{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .mi .nm{font-size:12px;font-weight:600;color:var(--bright);flex:1}
+    .mi .tp{font-size:10px;color:var(--dim);font-family:var(--mono)}
+    .ir{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+    .ir .l{color:var(--dim)}.ir .v{font-family:var(--mono);font-weight:600}
+    .lb{max-height:200px;overflow-y:auto}
+    .ll{font-size:10px;font-family:var(--mono);padding:2px 5px;border-radius:3px;line-height:1.4;word-break:break-word;margin-bottom:1px}
+    .ll.i{color:var(--dim)}.ll.s{color:var(--green);background:rgba(13,202,115,.06)}
+    .ll.w{color:var(--amber);background:rgba(232,168,32,.06)}.ll.e{color:var(--red);background:rgba(240,72,72,.06)}
+    .ht{font-size:11px;color:var(--dim);line-height:1.5;padding:7px 9px;border:1px dashed var(--border);border-radius:5px;margin-top:6px}
+    .snap{width:100%;border-radius:5px;border:1px solid var(--border);margin-top:6px}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   </style>
 </head>
 <body>
 
-<div class="header">
+<div class="hdr">
   <div>
     <h1>TrimbimTools</h1>
-    <div class="sub" id="projName">Connecting...</div>
+    <div class="sub" id="pn">Connecting...</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
-    <div class="dot" id="dot" style="background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.5s ease-in-out infinite"></div>
-    <span style="font-size:10px;font-family:var(--mono);color:var(--dim)" id="dotLbl">Connecting</span>
+    <div class="dot" id="dt" style="background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.5s ease-in-out infinite"></div>
+    <span style="font-size:10px;font-family:var(--mono);color:var(--dim)" id="dl">Connecting</span>
   </div>
 </div>
 
-<div class="content" id="main">
-  <div class="section">
-    <div class="section-title">Initializing</div>
-    <div style="text-align:center;padding:24px;color:var(--dim);font-size:12px">
-      Connecting to Trimble Connect 3D Viewer...
-    </div>
+<div class="cnt" id="ui">
+  <div class="sec"><div class="sec-t">Initializing</div>
+    <div style="text-align:center;padding:24px;color:var(--dim);font-size:12px">Connecting to Trimble Connect...</div>
   </div>
 </div>
 
 <script>
-(async function() {
-  var API = null;
-  var token = null;
-  var models = [];
-  var selModel = null;
-  var scanData = null;
-  var logs = [];
+(async function(){
+  var API, token, models=[], scan=null, logs=[], snapUrl=null;
+  var $ui=document.getElementById('ui'), $pn=document.getElementById('pn');
+  var $dt=document.getElementById('dt'), $dl=document.getElementById('dl');
 
-  var $main = document.getElementById('main');
-  var $proj = document.getElementById('projName');
-  var $dot = document.getElementById('dot');
-  var $dotLbl = document.getElementById('dotLbl');
-
-  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-  function short(s) { return !s ? '—' : s.length <= 18 ? s : s.slice(0,8) + '…' + s.slice(-4); }
-
-  function setStatus(phase) {
-    var c = phase === 'ready' ? 'var(--green)' : phase === 'error' ? 'var(--red)' : 'var(--amber)';
-    $dot.style.background = c; $dot.style.boxShadow = '0 0 6px ' + c;
-    $dot.style.animation = phase === 'connecting' ? 'pulse 1.5s ease-in-out infinite' : 'none';
-    $dotLbl.textContent = phase === 'ready' ? 'Live' : phase === 'error' ? 'Error' : 'Connecting';
+  function e(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+  function st(p){
+    var c=p==='ready'?'var(--green)':p==='error'?'var(--red)':'var(--amber)';
+    $dt.style.background=c;$dt.style.boxShadow='0 0 6px '+c;
+    $dt.style.animation=p==='connecting'?'pulse 1.5s ease-in-out infinite':'none';
+    $dl.textContent=p==='ready'?'Live':p==='error'?'Error':'Connecting';
+  }
+  function log(m,t){
+    t=t||'i';
+    var ts=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    logs.push({m:m,t:t,ts:ts});
+    if(logs.length>120)logs.shift();
+    rl();console.log('[TT]',m);
   }
 
-  function log(msg, type) {
-    type = type || 'info';
-    var ts = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    logs.push({ msg: msg, type: type, ts: ts });
-    if (logs.length > 150) logs.shift();
-    renderLog();
-    console.log('[TT][' + type + '] ' + msg);
-  }
-
-  // ── Safe JSON stringify (handles circular refs) ──────────────────────
-  function safeStr(obj, depth) {
-    depth = depth || 0;
-    if (depth > 2) return '"[deep]"';
-    try { return JSON.stringify(obj, null, 0); }
-    catch(e) { return '"[circular]"'; }
-  }
-
-  // ── Init ───────────────────────────────────────────────────────────────
-  try {
-    log('Connecting to window.parent...');
-    API = await TrimbleConnectWorkspace.connect(
-      window.parent,
-      function(event, data) {
-        if (event === 'extension.accessToken') {
-          token = (data && data.data) ? data.data : data;
-          log('Token refreshed via event', 'success');
-        }
-        if (event === 'viewer.modelState.changed') {
-          log('Model state changed', 'info');
-          loadModels();
-        }
-      },
-      30000
-    );
-    log('Connected!', 'success');
-
-    // Enumerate what APIs are available
-    log('API.viewer methods: ' + Object.keys(API.viewer || {}).join(', '), 'info');
-
-    var tr = await API.extension.requestPermission('accesstoken');
-    if (tr === 'denied') throw new Error('Token permission denied');
-    if (tr === 'pending') log('Token pending — waiting for user consent', 'warn');
-    else { token = tr; log('Token OK', 'success'); }
-
-    var proj = await API.project.getProject();
-    $proj.textContent = proj ? (proj.name || short(proj.id)) : 'Unknown';
-    log('Project: ' + (proj ? (proj.name || proj.id) : 'unknown'), 'success');
-
-    setStatus('ready');
-    await loadModels();
-    renderUI();
-  } catch(err) {
-    log('INIT FAILED: ' + err.message, 'error');
-    setStatus('error');
-  }
-
-  // ── Load models ────────────────────────────────────────────────────────
-  async function loadModels() {
-    if (!API) return;
-    log('getModels()...');
-    try {
-      var all = await API.viewer.getModels();
-      log('getModels → ' + (all ? all.length : 0) + ' models', 'success');
-
-      if (all && all.length > 0) {
-        var m0 = all[0];
-        log('Model[0] raw keys: ' + Object.keys(m0).join(', '), 'info');
-        log('Model[0] → name="' + m0.name + '" id=' + short(m0.id) +
-            ' ver=' + short(m0.versionId) + ' state=' + m0.state + ' type=' + m0.type, 'info');
+  // Extract runtime IDs from a getObjects result entry
+  // The API may return .objects (ObjectProperties[]) or .objectRuntimeIds (number[])
+  function extractIds(entry){
+    if(!entry) return [];
+    // Direct array of runtime IDs
+    if(entry.objectRuntimeIds && Array.isArray(entry.objectRuntimeIds))
+      return entry.objectRuntimeIds;
+    // Array of ObjectProperties — extract runtimeId from each
+    if(entry.objects && Array.isArray(entry.objects)){
+      var ids=[];
+      for(var i=0;i<entry.objects.length;i++){
+        var o=entry.objects[i];
+        var id = o.objectRuntimeId ?? o.runtimeId ?? o.entityId ?? o.id;
+        if(id!=null) ids.push(id);
       }
-
-      models = all || [];
-      if (!selModel && models.length > 0) selModel = models[0];
-      renderUI();
-    } catch(err) { log('getModels error: ' + err.message, 'error'); }
-  }
-
-  // ── Scan ───────────────────────────────────────────────────────────────
-  async function scanVisibility() {
-    if (!API) return;
-    log('══ SCAN START ══');
-
-    try {
-      // Step 1: getObjects() with NO args
-      log('1) getObjects() — no args...');
-      var rawAll;
-      try {
-        rawAll = await API.viewer.getObjects();
-      } catch(e) {
-        log('getObjects() threw: ' + e.message, 'error');
-        rawAll = null;
-      }
-
-      if (rawAll) {
-        log('   returned type: ' + typeof rawAll + ', isArray: ' + Array.isArray(rawAll) + ', length: ' + (rawAll.length || 'N/A'), 'info');
-        if (rawAll.length > 0) {
-          var f = rawAll[0];
-          log('   [0] keys: ' + Object.keys(f).join(', '), 'info');
-          log('   [0] modelId: ' + f.modelId, 'info');
-          if (f.objects) log('   [0].objects: Array(' + f.objects.length + ')', 'info');
-          if (f.objectRuntimeIds) log('   [0].objectRuntimeIds: Array(' + f.objectRuntimeIds.length + ')', 'info');
-          // Dump first object entry to see its shape
-          if (f.objects && f.objects.length > 0) {
-            log('   [0].objects[0] keys: ' + Object.keys(f.objects[0]).join(', '), 'info');
-          }
-        }
-      } else {
-        log('   result is null/undefined', 'warn');
-      }
-
-      // Step 2: getObjects with visible:true
-      log('2) getObjects(undefined, {visible:true})...');
-      var rawVis;
-      try {
-        rawVis = await API.viewer.getObjects(undefined, { visible: true });
-        log('   → ' + (rawVis ? rawVis.length : 0) + ' entries', 'info');
-      } catch(e) {
-        log('   threw: ' + e.message, 'error');
-        rawVis = null;
-      }
-
-      // Step 3: getObjects with visible:false
-      log('3) getObjects(undefined, {visible:false})...');
-      var rawHid;
-      try {
-        rawHid = await API.viewer.getObjects(undefined, { visible: false });
-        log('   → ' + (rawHid ? rawHid.length : 0) + ' entries', 'info');
-      } catch(e) {
-        log('   threw: ' + e.message, 'error');
-        rawHid = null;
-      }
-
-      // Step 4: getTrimbimModels
-      log('4) getTrimbimModels()...');
-      var trimbims;
-      try {
-        trimbims = await API.viewer.getTrimbimModels();
-        log('   → ' + (trimbims ? trimbims.length : 0) + ' trimbim(s)', 'info');
-        if (trimbims && trimbims.length > 0) {
-          log('   trimbim[0] keys: ' + Object.keys(trimbims[0]).join(', '), 'info');
-          log('   trimbim[0].id: ' + trimbims[0].id, 'info');
-        }
-      } catch(e) {
-        log('   threw: ' + e.message, 'error');
-        trimbims = null;
-      }
-
-      // Step 5: getSelection
-      log('5) getSelection()...');
-      try {
-        var sel = await API.viewer.getSelection();
-        if (sel) {
-          log('   selection type: ' + typeof sel + ', isArray: ' + Array.isArray(sel), 'info');
-          if (Array.isArray(sel) && sel.length > 0) {
-            log('   sel[0] keys: ' + Object.keys(sel[0]).join(', '), 'info');
-          } else if (typeof sel === 'object') {
-            log('   selection keys: ' + Object.keys(sel).join(', '), 'info');
-          }
-        } else {
-          log('   selection: null/empty', 'info');
-        }
-      } catch(e) { log('   threw: ' + e.message, 'warn'); }
-
-      // Step 6: getHierarchyChildren (root level)
-      if (models.length > 0) {
-        var mid = models[0].versionId || models[0].id;
-        log('6) getHierarchyChildren(modelId=' + short(mid) + ', [0])...');
-        try {
-          var hier = await API.viewer.getHierarchyChildren(mid, [0]);
-          log('   → ' + (hier ? hier.length : 0) + ' children', 'info');
-          if (hier && hier.length > 0) {
-            log('   child[0] keys: ' + Object.keys(hier[0]).join(', '), 'info');
-          }
-        } catch(e) { log('   threw: ' + e.message, 'warn'); }
-      }
-
-      // Count objects using the correct property
-      function countArr(arr) {
-        if (!arr || !Array.isArray(arr)) return 0;
-        var n = 0;
-        for (var i = 0; i < arr.length; i++) {
-          var e = arr[i];
-          if (e.objects && Array.isArray(e.objects)) n += e.objects.length;
-          else if (e.objectRuntimeIds && Array.isArray(e.objectRuntimeIds)) n += e.objectRuntimeIds.length;
-        }
-        return n;
-      }
-
-      var nAll = countArr(rawAll);
-      var nVis = countArr(rawVis);
-      var nHid = countArr(rawHid);
-
-      scanData = {
-        all: rawAll || [], visible: rawVis || [], hidden: rawHid || [],
-        nAll: nAll, nVis: nVis, nHid: nHid,
-        trimbims: trimbims || []
-      };
-
-      log('══ SCAN DONE ══ total=' + nAll + ' vis=' + nVis + ' hid=' + nHid, 'success');
-      renderUI();
-    } catch(err) {
-      log('Scan error: ' + err.message, 'error');
+      return ids;
     }
+    return [];
   }
 
-  // ── Reset ──────────────────────────────────────────────────────────────
-  async function resetVis() {
-    if (!API) return;
-    try {
-      await API.viewer.setObjectState(undefined, { visible: 'reset' });
-      log('Visibility reset', 'success');
-      await scanVisibility();
-    } catch(err) { log('Reset fail: ' + err.message, 'error'); }
+  function countAll(arr){
+    if(!arr) return 0;
+    var n=0;
+    for(var i=0;i<arr.length;i++) n+=extractIds(arr[i]).length;
+    return n;
   }
 
-  // ── Export ─────────────────────────────────────────────────────────────
-  async function doExport() {
-    if (!API || !scanData) return;
+  // ── INIT ───────────────────────────────────────────────────────────────
+  try{
+    log('Connecting to Trimble Connect...');
+    API=await TrimbleConnectWorkspace.connect(window.parent,function(ev,d){
+      if(ev==='extension.accessToken'){token=(d&&d.data)?d.data:d;log('Token refreshed','s');}
+      if(ev==='viewer.modelState.changed'){log('Model state changed');loadModels();}
+    },30000);
+    log('Connected!','s');
+
+    var tr=await API.extension.requestPermission('accesstoken');
+    if(tr==='denied') throw new Error('Token permission denied');
+    if(tr==='pending') log('Waiting for user consent...','w');
+    else{token=tr;log('Token OK','s');}
+
+    var proj=await API.project.getProject();
+    $pn.textContent=proj?(proj.name||proj.id):'Unknown';
+    log('Project: '+(proj?proj.name||proj.id:'?'),'s');
+
+    st('ready');
+    await loadModels();
+    render();
+  }catch(err){log('INIT FAILED: '+err.message,'e');st('error');}
+
+  // ── LOAD MODELS (only LOADED, show by name) ───────────────────────────
+  async function loadModels(){
+    if(!API)return;
+    try{
+      var all=await API.viewer.getModels();
+      // Filter to only loaded models
+      models=(all||[]).filter(function(m){return m.state==='LOADED';});
+      log('Loaded models: '+models.length+' of '+(all?all.length:0)+' total','s');
+      render();
+    }catch(err){log('getModels error: '+err.message,'e');}
+  }
+
+  // ── SCAN VISIBILITY ───────────────────────────────────────────────────
+  async function doScan(){
+    if(!API)return;
+    log('Scanning visibility...');
+    try{
+      var rawAll=await API.viewer.getObjects()||[];
+      var rawVis=await API.viewer.getObjects(undefined,{visible:true})||[];
+      var rawHid=await API.viewer.getObjects(undefined,{visible:false})||[];
+
+      // Log the shape once for debugging
+      if(rawAll.length>0){
+        var f=rawAll[0];
+        log('Data shape: keys=['+Object.keys(f).join(',')+']');
+        var ids=extractIds(f);
+        log('Objects in first model: '+ids.length+' (extracted via '+(f.objectRuntimeIds?'objectRuntimeIds':'objects')+')');
+      }
+
+      var nA=countAll(rawAll), nV=countAll(rawVis), nH=countAll(rawHid);
+
+      // Build per-model breakdown for the visible set
+      var breakdown=[];
+      for(var i=0;i<rawVis.length;i++){
+        var mid=rawVis[i].modelId;
+        var vIds=extractIds(rawVis[i]);
+        // Find matching model name
+        var mName=mid;
+        for(var j=0;j<models.length;j++){
+          if(models[j].id===mid||models[j].versionId===mid){
+            mName=models[j].name||mid;break;
+          }
+        }
+        // Count hidden for same model
+        var hIds=[];
+        for(var k=0;k<rawHid.length;k++){
+          if(rawHid[k].modelId===mid) hIds=extractIds(rawHid[k]);
+        }
+        breakdown.push({modelId:mid,name:mName,visCount:vIds.length,hidCount:hIds.length,visIds:vIds});
+      }
+
+      scan={all:rawAll,vis:rawVis,hid:rawHid,nA:nA,nV:nV,nH:nH,breakdown:breakdown};
+      snapUrl=null;
+      log('Scan done — '+nA+' total, '+nV+' visible, '+nH+' hidden','s');
+      render();
+    }catch(err){log('Scan error: '+err.message,'e');}
+  }
+
+  // ── RESET VISIBILITY ──────────────────────────────────────────────────
+  async function doReset(){
+    if(!API)return;
+    try{
+      await API.viewer.setObjectState(undefined,{visible:'reset'});
+      log('Visibility reset','s');
+      await doScan();
+    }catch(err){log('Reset error: '+err.message,'e');}
+  }
+
+  // ── EXPORT: isolate visible + create filtered trimbim + snapshot ───────
+  async function doExport(){
+    if(!API||!scan||scan.nV===0)return;
     log('══ EXPORT START ══');
 
-    try {
-      // We need visible objects with their runtime IDs per model
-      var entries = scanData.visible;
-      if (!entries || entries.length === 0) {
-        log('No visible entries', 'error'); return;
-      }
+    try{
+      for(var i=0;i<scan.vis.length;i++){
+        var entry=scan.vis[i];
+        var mid=entry.modelId;
+        var rids=extractIds(entry);
 
-      for (var i = 0; i < entries.length; i++) {
-        var entry = entries[i];
-        var modelId = entry.modelId;
-        log('Processing model: ' + short(modelId));
-
-        // Extract runtime IDs from the entry
-        var rids = [];
-        if (entry.objectRuntimeIds) {
-          rids = entry.objectRuntimeIds;
-        } else if (entry.objects) {
-          for (var j = 0; j < entry.objects.length; j++) {
-            var o = entry.objects[j];
-            // Try various possible property names
-            var rid = o.objectRuntimeId || o.runtimeId || o.entityId || o.id;
-            if (rid != null) rids.push(rid);
-          }
-        }
-        log('  ' + rids.length + ' runtime IDs extracted');
-
-        if (rids.length === 0) continue;
-
-        // isolateEntities to show only these
-        log('  Calling isolateEntities...');
-        try {
-          await API.viewer.isolateEntities([{ modelId: modelId, entityIds: rids }]);
-          log('  isolateEntities OK!', 'success');
-        } catch(e) {
-          log('  isolateEntities fail: ' + e.message, 'error');
+        // Find model name
+        var mName=mid;
+        for(var j=0;j<models.length;j++){
+          if(models[j].id===mid||models[j].versionId===mid){mName=models[j].name;break;}
         }
 
-        // Convert to external IDs
-        try {
-          var ext = await API.viewer.convertToObjectIds(modelId, rids.slice(0, 5));
-          log('  IFC GUIDs sample: ' + ext.join(', '), 'success');
-        } catch(e) { log('  convertToObjectIds: ' + e.message, 'warn'); }
+        if(rids.length===0){log('  '+mName+': no visible IDs, skip','w');continue;}
+        log('  '+mName+': '+rids.length+' visible objects');
+
+        // 1) Isolate — shows only these objects in the viewer
+        try{
+          await API.viewer.isolateEntities([{modelId:mid,entityIds:rids}]);
+          log('  Isolated in viewer — only visible objects shown','s');
+        }catch(err){log('  isolateEntities: '+err.message,'e');}
+
+        // 2) Try addTrimbimModel with selector for a filtered TRB
+        try{
+          var trbId='trimbim_export_'+Date.now();
+          await API.viewer.addTrimbimModel({
+            id:trbId,
+            trbBlobFromId:mid,
+            visible:true,
+            fitToView:false,
+            selector:{
+              modelObjectIds:[{modelId:mid,objectRuntimeIds:rids}]
+            }
+          });
+          log('  Filtered TRB added to viewer: '+trbId,'s');
+        }catch(err){
+          log('  addTrimbimModel: '+err.message,'w');
+          log('  (Filtered TRB not supported — isolate view is active)','i');
+        }
+
+        // 3) Convert some IDs to IFC GUIDs for reference
+        try{
+          var ext=await API.viewer.convertToObjectIds(mid,rids.slice(0,5));
+          log('  IFC GUIDs (sample): '+ext.join(', '),'s');
+        }catch(err){log('  convertToObjectIds: '+err.message,'w');}
       }
 
-      log('══ EXPORT DONE ══', 'success');
-    } catch(err) { log('Export error: ' + err.message, 'error'); }
+      // 4) Capture snapshot of the filtered view
+      try{
+        var snap=await API.viewer.getSnapshot();
+        if(snap){
+          snapUrl=snap;
+          log('  Snapshot captured','s');
+        }
+      }catch(err){log('  Snapshot: '+err.message,'w');}
+
+      log('══ EXPORT COMPLETE ══','s');
+      log('The viewer now shows only visible objects. Use TC Desktop to export as .trb if needed.','i');
+      render();
+    }catch(err){log('Export error: '+err.message,'e');}
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────
-  function renderUI() {
-    var h = '';
+  // ── RENDER ─────────────────────────────────────────────────────────────
+  function render(){
+    var h='';
 
-    // Models
-    h += '<div class="section"><div class="section-title">Models (' + models.length + ')</div>';
-    if (models.length === 0) {
-      h += '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px 0">No models. Load one in the viewer.</div>';
+    // Models — only LOADED, shown by name
+    h+='<div class="sec"><div class="sec-t">Models in Viewer</div>';
+    if(models.length===0){
+      h+='<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px 0">No models loaded in viewer.</div>';
+    }else{
+      for(var i=0;i<models.length;i++){
+        var m=models[i];
+        h+='<div class="mi">';
+        h+='<div class="ic" style="background:var(--green)"></div>';
+        h+='<div class="nm">'+e(m.name||'Unnamed')+'</div>';
+        h+='<div class="tp">'+e(m.type||'')+'</div>';
+        h+='</div>';
+      }
     }
-    for (var i = 0; i < models.length; i++) {
-      var m = models[i], sel = selModel && selModel.id === m.id;
-      var sc = m.state === 'LOADED' ? 'var(--green)' : m.state === 'LOADING' ? 'var(--amber)' : 'var(--dim)';
-      h += '<div class="model-item' + (sel ? ' sel' : '') + '" data-i="' + i + '">';
-      h += '<div class="model-name">' + esc(m.name || '?') + '</div>';
-      h += '<div class="model-meta">id: ' + esc(short(m.id)) + ' | ver: ' + esc(short(m.versionId)) + '</div>';
-      h += '<div class="model-meta">state: <span style="color:' + sc + '">' + esc(m.state||'?') + '</span> | type: ' + esc(m.type||'?') + '</div>';
-      h += '</div>';
-    }
-    h += '<button class="btn btn-dim" onclick="window._refresh()">Refresh</button>';
-    h += '</div>';
+    h+='<button class="btn btn-d" onclick="W._lm()">Refresh</button>';
+    h+='</div>';
 
     // Scan
-    h += '<div class="section"><div class="section-title">Object Visibility</div>';
-    h += '<button class="btn btn-blue" onclick="window._scan()">Scan Visibility</button>';
-    if (scanData) {
-      h += '<div class="stats">';
-      h += '<div class="stat-box"><div class="stat-val" style="color:var(--blue)">' + scanData.nAll + '</div><div class="stat-lbl">Total</div></div>';
-      h += '<div class="stat-box"><div class="stat-val" style="color:var(--green)">' + scanData.nVis + '</div><div class="stat-lbl">Visible</div></div>';
-      h += '<div class="stat-box"><div class="stat-val" style="color:var(--red)">' + scanData.nHid + '</div><div class="stat-lbl">Hidden</div></div>';
-      h += '</div>';
-      // Breakdown per model entry
-      for (var i = 0; i < scanData.all.length; i++) {
-        var e = scanData.all[i];
-        var n = e.objects ? e.objects.length : (e.objectRuntimeIds ? e.objectRuntimeIds.length : '?');
-        h += '<div class="obj-card"><div style="font-size:10px;font-family:var(--mono);color:var(--blue)">modelId: ' + esc(short(e.modelId||'?')) + '</div>';
-        h += '<div style="font-size:11px;margin-top:2px">' + n + ' objects</div></div>';
+    h+='<div class="sec"><div class="sec-t">Object Visibility</div>';
+    h+='<button class="btn btn-b" onclick="W._sc()">Scan Visibility</button>';
+    if(scan){
+      h+='<div class="sts">';
+      h+='<div class="st"><div class="st-v" style="color:var(--blue)">'+scan.nA+'</div><div class="st-l">Total</div></div>';
+      h+='<div class="st"><div class="st-v" style="color:var(--green)">'+scan.nV+'</div><div class="st-l">Visible</div></div>';
+      h+='<div class="st"><div class="st-v" style="color:var(--red)">'+scan.nH+'</div><div class="st-l">Hidden</div></div>';
+      h+='</div>';
+
+      // Per-model breakdown by name
+      for(var i=0;i<scan.breakdown.length;i++){
+        var b=scan.breakdown[i];
+        h+='<div style="padding:6px 9px;border:1px solid var(--border);border-radius:5px;margin-bottom:3px">';
+        h+='<div style="font-size:12px;font-weight:600;color:var(--bright)">'+e(b.name)+'</div>';
+        h+='<div style="font-size:11px;margin-top:2px">';
+        h+='<span style="color:var(--green)">'+b.visCount+' visible</span>';
+        h+=' · <span style="color:var(--red)">'+b.hidCount+' hidden</span>';
+        h+='</div></div>';
       }
-      if (scanData.trimbims.length > 0) {
-        h += '<div style="font-size:10px;color:var(--dim);margin-top:4px">' + scanData.trimbims.length + ' trimbim(s) in viewer</div>';
-      }
-      h += '<button class="btn btn-amber" onclick="window._reset()">Reset Visibility</button>';
-    } else {
-      h += '<div class="hint">Hide objects in the viewer, then scan here to see which are visible vs hidden.</div>';
+      h+='<button class="btn btn-a" onclick="W._rs()">Show All (Reset)</button>';
+    }else{
+      h+='<div class="ht">Hide objects in the 3D viewer, then click "Scan Visibility" to see which are visible vs hidden.</div>';
     }
-    h += '</div>';
+    h+='</div>';
 
     // Export
-    h += '<div class="section"><div class="section-title">Export</div>';
-    var cv = scanData ? scanData.nVis : 0, ch = scanData ? scanData.nHid : 0;
-    h += '<div class="info-row"><span class="lbl">Include</span><span class="val" style="color:var(--green)">' + cv + '</span></div>';
-    h += '<div class="info-row"><span class="lbl">Exclude</span><span class="val" style="color:var(--red)">' + ch + '</span></div>';
-    h += '<button class="btn btn-green" onclick="window._export()"' + (cv > 0 ? '' : ' disabled') + '>' +
-      (cv > 0 ? 'Isolate ' + cv + ' visible objects' : 'Scan first') + '</button>';
-    h += '</div>';
+    h+='<div class="sec"><div class="sec-t">Export Visible Objects</div>';
+    var cv=scan?scan.nV:0, ch=scan?scan.nH:0;
+    h+='<div style="padding:6px 0">';
+    h+='<div class="ir"><span class="l">Will keep</span><span class="v" style="color:var(--green)">'+cv+' objects</span></div>';
+    h+='<div class="ir"><span class="l">Will remove</span><span class="v" style="color:var(--red)">'+ch+' objects</span></div>';
+    h+='</div>';
+    h+='<button class="btn btn-g" onclick="W._ex()"'+(cv>0?'':' disabled')+'>';
+    h+=cv>0?'Export '+cv+' visible objects':'Scan objects first';
+    h+='</button>';
+    if(snapUrl){
+      h+='<div class="sec-t" style="margin-top:10px;margin-bottom:4px">Export Snapshot</div>';
+      h+='<img class="snap" src="'+snapUrl+'" alt="Filtered view snapshot" />';
+      h+='<a href="'+snapUrl+'" download="trimbim-export.png" style="display:block;margin-top:4px">';
+      h+='<button class="btn btn-d" style="width:100%">Download Snapshot</button></a>';
+    }
+    h+='<div class="ht" style="margin-top:8px"><strong>How export works:</strong><br>';
+    h+='1. Isolates visible objects in the viewer<br>';
+    h+='2. Creates a filtered TRB reference in viewer<br>';
+    h+='3. Captures a snapshot of the result<br><br>';
+    h+='For a downloadable .trb file, use Trimble Connect Desktop → "Export as TRB" after applying the same visibility filter.</div>';
+    h+='</div>';
 
     // Log
-    h += '<div class="section"><div class="section-title">Log (' + logs.length + ')</div>';
-    h += '<div class="log-box" id="logBox"></div>';
-    if (logs.length > 0) h += '<button class="btn btn-dim" onclick="window._clr()" style="font-size:10px;padding:5px">Clear</button>';
-    h += '</div>';
+    h+='<div class="sec"><div class="sec-t">Log ('+logs.length+')</div>';
+    h+='<div class="lb" id="lbx"></div>';
+    if(logs.length>0) h+='<button class="btn btn-d" onclick="W._cl()" style="font-size:10px;padding:5px">Clear</button>';
+    h+='</div>';
 
-    $main.innerHTML = h;
-    renderLog();
-
-    // Bind model clicks
-    $main.querySelectorAll('.model-item').forEach(function(el) {
-      el.addEventListener('click', function() {
-        selModel = models[parseInt(el.getAttribute('data-i'))];
-        renderUI();
-      });
-    });
+    $ui.innerHTML=h;
+    rl();
   }
 
-  function renderLog() {
-    var box = document.getElementById('logBox');
-    if (!box) return;
-    var h = '';
-    for (var i = logs.length - 1; i >= Math.max(0, logs.length - 80); i--) {
-      h += '<div class="log-line ' + logs[i].type + '"><span style="opacity:0.4">' + logs[i].ts + '</span> ' + esc(logs[i].msg) + '</div>';
+  function rl(){
+    var b=document.getElementById('lbx');if(!b)return;
+    var h='';
+    var cls={i:'i',s:'s',w:'w',e:'e'};
+    for(var i=logs.length-1;i>=Math.max(0,logs.length-60);i--){
+      var l=logs[i];
+      h+='<div class="ll '+cls[l.t]+'"><span style="opacity:.4">'+l.ts+'</span> '+e(l.m)+'</div>';
     }
-    box.innerHTML = h;
+    b.innerHTML=h;
   }
 
-  window._scan = scanVisibility;
-  window._reset = resetVis;
-  window._export = doExport;
-  window._refresh = loadModels;
-  window._clr = function() { logs.length = 0; renderUI(); };
+  // Global bindings
+  window.W={_sc:doScan,_rs:doReset,_ex:doExport,_lm:loadModels,_cl:function(){logs.length=0;render();}};
 })();
 </script>
 </body>
