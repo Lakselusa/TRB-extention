@@ -3,817 +3,464 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TrimbimTools — Visibility Filter</title>
-
-  <!-- Trimble Connect Workspace API (IIFE bundle) -->
+  <title>TrimbimTools</title>
   <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0c1018;
-      --panel: #111820;
-      --card: #161e2a;
-      --border: #1e2a3a;
-      --border-lit: #2d4a6f;
-      --text: #d4dce8;
-      --text-dim: #5a7089;
-      --text-bright: #f0f4f8;
-      --blue: #2e8cf0;
-      --blue-glow: rgba(46,140,240,0.12);
-      --green: #0dca73;
-      --green-glow: rgba(13,202,115,0.1);
-      --red: #f04848;
-      --red-glow: rgba(240,72,72,0.1);
-      --amber: #e8a820;
-      --amber-glow: rgba(232,168,32,0.1);
+      --bg: #0c1018; --panel: #111820; --card: #161e2a;
+      --border: #1e2a3a; --text: #d4dce8; --dim: #5a7089; --bright: #f0f4f8;
+      --blue: #2e8cf0; --green: #0dca73; --red: #f04848; --amber: #e8a820;
       --mono: 'IBM Plex Mono', Consolas, monospace;
       --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
-      --radius: 6px;
     }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Header ─────────────────────────────────── */
-    .header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo {
-      width: 32px; height: 32px;
-      border-radius: 6px;
-      background: var(--blue-glow);
-      border: 1px solid rgba(46,140,240,0.2);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .header-title {
-      font-size: 14px; font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text-bright);
-    }
-    .header-sub {
-      font-size: 11px;
-      color: var(--text-dim);
-      font-family: var(--mono);
-      margin-top: 1px;
-    }
-    .status-dot {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .status-dot .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-    }
-    .status-dot .label {
-      font-size: 10px;
-      color: var(--text-dim);
-      font-family: var(--mono);
-    }
-
-    /* ── Content ────────────────────────────────── */
-    .content {
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-width: 420px;
-    }
-
-    /* ── Section ────────────────────────────────── */
-    .section {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .section-label {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-dim);
-    }
-    .section-count {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: var(--text-dim);
-      background: var(--card);
-      padding: 2px 7px;
-      border-radius: 4px;
-    }
-
-    /* ── Model row ──────────────────────────────── */
-    .model-row {
-      width: 100%;
-      display: block;
-      text-align: left;
-      padding: 9px 11px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: transparent;
-      cursor: pointer;
-      margin-bottom: 4px;
-      transition: all 0.1s ease;
-      font-family: var(--sans);
-    }
-    .model-row:hover { background: var(--card); }
-    .model-row.selected {
-      border-color: var(--blue);
-      background: var(--blue-glow);
-    }
-    .model-name {
-      font-size: 12px; font-weight: 600;
-      color: var(--text-bright);
-    }
-    .model-id {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: var(--text-dim);
-      margin-top: 2px;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 9px; font-weight: 700;
-      font-family: var(--mono);
-      padding: 2px 6px;
-      border-radius: 3px;
-      margin-top: 4px;
-      letter-spacing: 0.03em;
-    }
-    .badge.loaded { color: var(--green); background: var(--green-glow); }
-    .badge.loading { color: var(--amber); background: var(--amber-glow); }
-    .badge.unloaded { color: var(--text-dim); background: transparent; }
-
-    /* ── Stats row ──────────────────────────────── */
-    .stat-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-      margin: 10px 0 8px;
-    }
-    .stat {
-      padding: 8px 6px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      text-align: center;
-    }
-    .stat-value {
-      font-size: 20px; font-weight: 800;
-      font-family: var(--mono);
-      line-height: 1;
-    }
-    .stat-label {
-      font-size: 9px; font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-dim);
-      margin-top: 3px;
-    }
-
-    /* ── Object card ────────────────────────────── */
-    .object-card {
-      padding: 8px 10px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      margin-bottom: 6px;
-    }
-    .object-model-id {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--blue);
-      font-weight: 600;
-    }
-    .object-counts {
-      font-size: 11px;
-      margin-top: 3px;
-    }
-    .id-preview {
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--text-dim);
-      margin-top: 4px;
-      line-height: 1.4;
-      word-break: break-all;
-      max-height: 36px;
-      overflow: hidden;
-    }
-
-    /* ── Export info ─────────────────────────────── */
-    .export-info {
-      padding: 8px 10px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      margin-bottom: 8px;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 0;
-    }
-    .info-row .label { font-size: 11px; color: var(--text-dim); }
-    .info-row .value {
-      font-size: 11px;
-      font-family: var(--mono);
-      font-weight: 600;
-    }
-
-    /* ── Button ──────────────────────────────────── */
-    .btn {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: var(--radius);
-      font-family: var(--sans);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.12s ease;
-      margin-top: 6px;
-      letter-spacing: 0.01em;
-    }
-    .btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .btn-sm { padding: 6px 10px; font-size: 11px; }
-
-    /* ── Log ─────────────────────────────────────── */
-    .log-container {
-      max-height: 200px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .log-line {
-      font-size: 10px;
-      font-family: var(--mono);
-      padding: 3px 6px;
-      border-radius: 3px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
-    .log-line.info { color: var(--text-dim); }
-    .log-line.success { color: var(--green); background: var(--green-glow); }
-    .log-line.warn { color: var(--amber); background: var(--amber-glow); }
-    .log-line.error { color: var(--red); background: var(--red-glow); }
-
-    .hint {
-      font-size: 11px;
-      color: var(--text-dim);
-      line-height: 1.5;
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-radius: var(--radius);
-      border: 1px dashed var(--border);
-    }
-    .empty {
-      font-size: 11px;
-      color: var(--text-dim);
-      text-align: center;
-      padding: 12px 0;
-    }
-
-    .status-panel {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 48px 24px; text-align: center;
-    }
-    .status-panel .icon { font-size: 32px; margin-bottom: 12px; }
-    .status-panel .title {
-      font-size: 15px; font-weight: 700;
-      color: var(--text-bright); margin-bottom: 6px;
-    }
-    .status-panel .sub {
-      font-size: 12px; color: var(--text-dim);
-      max-width: 260px; line-height: 1.5;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+    .header { padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--panel);
+      display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 14px; font-weight: 700; color: var(--bright); }
+    .header .sub { font-size: 11px; color: var(--dim); font-family: var(--mono); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .content { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .section { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--dim); margin-bottom: 8px; }
+    .btn { width: 100%; padding: 9px 12px; border-radius: 5px; font-family: var(--sans);
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.1s; margin-top: 4px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-blue { border: 1px solid var(--blue); background: rgba(46,140,240,0.1); color: var(--blue); }
+    .btn-green { border: 1px solid var(--green); background: rgba(13,202,115,0.08); color: var(--green); }
+    .btn-amber { border: 1px solid var(--amber); background: rgba(232,168,32,0.08); color: var(--amber); }
+    .btn-dim { border: 1px solid var(--border); background: transparent; color: var(--dim); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 8px 0; }
+    .stat-box { text-align: center; padding: 6px 4px; border-radius: 5px; border: 1px solid var(--border); }
+    .stat-val { font-size: 18px; font-weight: 800; font-family: var(--mono); }
+    .stat-lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--dim); margin-top: 2px; }
+    .model-item { padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 3px; cursor: pointer; }
+    .model-item:hover { background: var(--card); }
+    .model-item.sel { border-color: var(--blue); background: rgba(46,140,240,0.08); }
+    .model-name { font-size: 12px; font-weight: 600; color: var(--bright); }
+    .model-meta { font-size: 10px; font-family: var(--mono); color: var(--dim); margin-top: 2px; }
+    .obj-card { padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; }
+    .info-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11px; }
+    .info-row .lbl { color: var(--dim); }
+    .info-row .val { font-family: var(--mono); font-weight: 600; }
+    .log-box { max-height: 220px; overflow-y: auto; }
+    .log-line { font-size: 10px; font-family: var(--mono); padding: 2px 5px; border-radius: 3px;
+      line-height: 1.4; word-break: break-word; margin-bottom: 1px; }
+    .log-line.info { color: var(--dim); }
+    .log-line.success { color: var(--green); background: rgba(13,202,115,0.06); }
+    .log-line.warn { color: var(--amber); background: rgba(232,168,32,0.06); }
+    .log-line.error { color: var(--red); background: rgba(240,72,72,0.06); }
+    .hint { font-size: 11px; color: var(--dim); line-height: 1.5; padding: 7px 9px;
+      border: 1px dashed var(--border); border-radius: 5px; margin-top: 6px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   </style>
 </head>
 <body>
 
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M2 4L8 1L14 4V12L8 15L2 12V4Z" stroke="#2e8cf0" stroke-width="1.5" fill="rgba(46,140,240,0.2)" />
-          <path d="M8 1V15" stroke="#2e8cf0" stroke-width="1" opacity="0.4" />
-          <path d="M2 4L14 4" stroke="#2e8cf0" stroke-width="1" opacity="0.4" />
-        </svg>
-      </div>
-      <div>
-        <div class="header-title">TrimbimTools</div>
-        <div class="header-sub" id="projectName">Connecting...</div>
-      </div>
-    </div>
-    <div class="status-dot">
-      <div class="dot" id="statusDot" style="background:var(--amber); box-shadow:0 0 6px var(--amber); animation:pulse 1.5s ease-in-out infinite;"></div>
-      <span class="label" id="statusLabel">Connecting</span>
+<div class="header">
+  <div>
+    <h1>TrimbimTools</h1>
+    <div class="sub" id="projName">Connecting...</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div class="dot" id="dot" style="background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.5s ease-in-out infinite"></div>
+    <span style="font-size:10px;font-family:var(--mono);color:var(--dim)" id="dotLbl">Connecting</span>
+  </div>
+</div>
+
+<div class="content" id="main">
+  <div class="section">
+    <div class="section-title">Initializing</div>
+    <div style="text-align:center;padding:24px;color:var(--dim);font-size:12px">
+      Connecting to Trimble Connect 3D Viewer...
     </div>
   </div>
+</div>
 
-  <!-- ── Content ─────────────────────────────────────────────────────── -->
-  <div class="content" id="mainContent">
-    <div class="status-panel" id="connectingPanel">
-      <div class="icon" style="color:var(--blue); animation:spin 2s linear infinite;">◌</div>
-      <div class="title">Connecting</div>
-      <div class="sub">Establishing connection to Trimble Connect 3D Viewer...</div>
-    </div>
-  </div>
+<script>
+(async function() {
+  var API = null;
+  var token = null;
+  var models = [];
+  var selModel = null;
+  var scanData = null;
+  var logs = [];
 
-  <!-- ── Ready UI (hidden until connected) ───────────────────────────── -->
-  <template id="readyUI">
-    <!-- Models -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-label">Loaded Models</span>
-        <span class="section-count" id="modelCount">0</span>
-      </div>
-      <div id="modelList"></div>
-    </div>
+  var $main = document.getElementById('main');
+  var $proj = document.getElementById('projName');
+  var $dot = document.getElementById('dot');
+  var $dotLbl = document.getElementById('dotLbl');
 
-    <!-- Scan -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-label">Object Visibility</span>
-      </div>
-      <button class="btn" id="btnScan"
-        style="border:1px solid var(--blue); background:var(--blue-glow); color:var(--blue);">
-        Scan Visibility
-      </button>
-      <div id="scanResults" style="display:none;">
-        <div class="stat-row">
-          <div class="stat">
-            <div class="stat-value" id="statAll" style="color:var(--blue);">0</div>
-            <div class="stat-label">Total</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="statVis" style="color:var(--green);">0</div>
-            <div class="stat-label">Visible</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="statHid" style="color:var(--red);">0</div>
-            <div class="stat-label">Hidden</div>
-          </div>
-        </div>
-        <div id="objectBreakdown"></div>
-        <button class="btn" id="btnReset"
-          style="border:1px solid var(--amber); color:var(--amber); background:transparent;">
-          Reset All Visibility
-        </button>
-      </div>
-      <div class="hint" id="scanHint">
-        Hide objects in the 3D viewer (right-click → Hide), then scan to capture which objects are visible.
-      </div>
-    </div>
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function short(s) { return !s ? '—' : s.length <= 18 ? s : s.slice(0,8) + '…' + s.slice(-4); }
 
-    <!-- Export -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-label">Export Filtered TRB</span>
-      </div>
-      <div class="export-info" id="exportInfo">
-        <div class="info-row">
-          <span class="label">Will include</span>
-          <span class="value" id="exportVis" style="color:var(--green);">0 objects</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Will exclude</span>
-          <span class="value" id="exportHid" style="color:var(--red);">0 objects</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Source model</span>
-          <span class="value" id="exportModel" style="color:var(--blue);">—</span>
-        </div>
-      </div>
-      <button class="btn" id="btnExport"
-        style="border:1px solid var(--green); background:var(--green-glow); color:var(--green);" disabled>
-        Scan objects first
-      </button>
-    </div>
+  function setStatus(phase) {
+    var c = phase === 'ready' ? 'var(--green)' : phase === 'error' ? 'var(--red)' : 'var(--amber)';
+    $dot.style.background = c; $dot.style.boxShadow = '0 0 6px ' + c;
+    $dot.style.animation = phase === 'connecting' ? 'pulse 1.5s ease-in-out infinite' : 'none';
+    $dotLbl.textContent = phase === 'ready' ? 'Live' : phase === 'error' ? 'Error' : 'Connecting';
+  }
 
-    <!-- Log -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-label">Log</span>
-        <span class="section-count" id="logCount">0</span>
-      </div>
-      <div class="log-container" id="logContainer"></div>
-      <button class="btn btn-sm" id="btnClearLog"
-        style="border:1px solid var(--text-dim); color:var(--text-dim); background:transparent; display:none;">
-        Clear
-      </button>
-    </div>
-  </template>
+  function log(msg, type) {
+    type = type || 'info';
+    var ts = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    logs.push({ msg: msg, type: type, ts: ts });
+    if (logs.length > 150) logs.shift();
+    renderLog();
+    console.log('[TT][' + type + '] ' + msg);
+  }
 
-  <!-- ── Main Script ─────────────────────────────────────────────────── -->
-  <script>
-    (async function () {
-      // ── State ────────────────────────────────────────────────────────
-      let API = null;
-      let accessToken = null;
-      let models = [];
-      let selectedModel = null;
-      let visibleObjects = [];
-      let hiddenObjects = [];
-      let allObjects = [];
-      const logEntries = [];
+  // ── Safe JSON stringify (handles circular refs) ──────────────────────
+  function safeStr(obj, depth) {
+    depth = depth || 0;
+    if (depth > 2) return '"[deep]"';
+    try { return JSON.stringify(obj, null, 0); }
+    catch(e) { return '"[circular]"'; }
+  }
 
-      // ── DOM refs ─────────────────────────────────────────────────────
-      const $content = document.getElementById("mainContent");
-      const $connectingPanel = document.getElementById("connectingPanel");
-      const $projectName = document.getElementById("projectName");
-      const $statusDot = document.getElementById("statusDot");
-      const $statusLabel = document.getElementById("statusLabel");
-
-      // ── Helpers ──────────────────────────────────────────────────────
-      function shortId(id) {
-        if (!id) return "—";
-        return id.length <= 16 ? id : id.slice(0, 8) + "…" + id.slice(-4);
-      }
-
-      function countIds(arr) {
-        return (arr || []).reduce(function (s, m) {
-          return s + (m.objectRuntimeIds ? m.objectRuntimeIds.length : 0);
-        }, 0);
-      }
-
-      function addLog(msg, type) {
-        type = type || "info";
-        var ts = new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit", minute: "2-digit", second: "2-digit"
-        });
-        logEntries.push({ msg: msg, type: type, ts: ts });
-        // Keep max 100
-        if (logEntries.length > 100) logEntries.shift();
-        renderLog();
-      }
-
-      function renderLog() {
-        var $c = document.getElementById("logContainer");
-        var $count = document.getElementById("logCount");
-        var $clear = document.getElementById("btnClearLog");
-        if (!$c) return;
-
-        $count.textContent = logEntries.length;
-        $clear.style.display = logEntries.length > 0 ? "block" : "none";
-
-        $c.innerHTML = logEntries.slice().reverse().map(function (e) {
-          return '<div class="log-line ' + e.type + '">' +
-            '<span style="opacity:0.45">' + e.ts + '</span> ' +
-            escapeHtml(e.msg) +
-            '</div>';
-        }).join("");
-        $c.scrollTop = 0;
-      }
-
-      function escapeHtml(str) {
-        var d = document.createElement("div");
-        d.textContent = str;
-        return d.innerHTML;
-      }
-
-      function setStatus(phase) {
-        var colors = { ready: "var(--green)", error: "var(--red)", connecting: "var(--amber)" };
-        var labels = { ready: "Live", error: "Error", connecting: "Connecting" };
-        $statusDot.style.background = colors[phase] || colors.connecting;
-        $statusDot.style.boxShadow = "0 0 6px " + (colors[phase] || colors.connecting);
-        $statusDot.style.animation = phase === "connecting" ? "pulse 1.5s ease-in-out infinite" : "none";
-        $statusLabel.textContent = labels[phase] || "Unknown";
-      }
-
-      // ── Show ready UI ────────────────────────────────────────────────
-      function showReadyUI() {
-        var template = document.getElementById("readyUI");
-        $content.innerHTML = "";
-        $content.appendChild(template.content.cloneNode(true));
-        bindUI();
-        renderModels();
-      }
-
-      function bindUI() {
-        document.getElementById("btnScan").addEventListener("click", scanObjects);
-        document.getElementById("btnReset").addEventListener("click", resetVisibility);
-        document.getElementById("btnExport").addEventListener("click", exportFilteredTrb);
-        document.getElementById("btnClearLog").addEventListener("click", function () {
-          logEntries.length = 0;
-          renderLog();
-        });
-      }
-
-      // ── Render models ────────────────────────────────────────────────
-      function renderModels() {
-        var $list = document.getElementById("modelList");
-        var $count = document.getElementById("modelCount");
-        if (!$list) return;
-
-        $count.textContent = models.length;
-
-        if (models.length === 0) {
-          $list.innerHTML = '<div class="empty">No models loaded. Open a model in the viewer.</div>';
-          return;
+  // ── Init ───────────────────────────────────────────────────────────────
+  try {
+    log('Connecting to window.parent...');
+    API = await TrimbleConnectWorkspace.connect(
+      window.parent,
+      function(event, data) {
+        if (event === 'extension.accessToken') {
+          token = (data && data.data) ? data.data : data;
+          log('Token refreshed via event', 'success');
         }
+        if (event === 'viewer.modelState.changed') {
+          log('Model state changed', 'info');
+          loadModels();
+        }
+      },
+      30000
+    );
+    log('Connected!', 'success');
 
-        $list.innerHTML = models.map(function (m, i) {
-          var isSelected = selectedModel && selectedModel.id === m.id;
-          var stateClass = (m.state || "").toLowerCase();
-          return '<button class="model-row' + (isSelected ? " selected" : "") + '" data-index="' + i + '">' +
-            '<div class="model-name">' + escapeHtml(m.name || shortId(m.id)) + '</div>' +
-            '<div class="model-id">' + escapeHtml(shortId(m.id)) + '</div>' +
-            (m.state ? '<span class="badge ' + stateClass + '">' + m.state + '</span>' : '') +
-            '</button>';
-        }).join("");
+    // Enumerate what APIs are available
+    log('API.viewer methods: ' + Object.keys(API.viewer || {}).join(', '), 'info');
 
-        $list.querySelectorAll(".model-row").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            var idx = parseInt(btn.getAttribute("data-index"));
-            selectedModel = models[idx];
-            renderModels();
-            updateExportInfo();
-          });
-        });
+    var tr = await API.extension.requestPermission('accesstoken');
+    if (tr === 'denied') throw new Error('Token permission denied');
+    if (tr === 'pending') log('Token pending — waiting for user consent', 'warn');
+    else { token = tr; log('Token OK', 'success'); }
+
+    var proj = await API.project.getProject();
+    $proj.textContent = proj ? (proj.name || short(proj.id)) : 'Unknown';
+    log('Project: ' + (proj ? (proj.name || proj.id) : 'unknown'), 'success');
+
+    setStatus('ready');
+    await loadModels();
+    renderUI();
+  } catch(err) {
+    log('INIT FAILED: ' + err.message, 'error');
+    setStatus('error');
+  }
+
+  // ── Load models ────────────────────────────────────────────────────────
+  async function loadModels() {
+    if (!API) return;
+    log('getModels()...');
+    try {
+      var all = await API.viewer.getModels();
+      log('getModels → ' + (all ? all.length : 0) + ' models', 'success');
+
+      if (all && all.length > 0) {
+        var m0 = all[0];
+        log('Model[0] raw keys: ' + Object.keys(m0).join(', '), 'info');
+        log('Model[0] → name="' + m0.name + '" id=' + short(m0.id) +
+            ' ver=' + short(m0.versionId) + ' state=' + m0.state + ' type=' + m0.type, 'info');
       }
 
-      // ── Scan objects ─────────────────────────────────────────────────
-      async function scanObjects() {
-        if (!API) return;
-        var $btn = document.getElementById("btnScan");
-        $btn.textContent = "Scanning...";
-        $btn.disabled = true;
-        addLog("Scanning object visibility in viewer...");
+      models = all || [];
+      if (!selModel && models.length > 0) selModel = models[0];
+      renderUI();
+    } catch(err) { log('getModels error: ' + err.message, 'error'); }
+  }
 
-        try {
-          allObjects = (await API.viewer.getObjects()) || [];
-          visibleObjects = (await API.viewer.getObjects(undefined, { visible: true })) || [];
-          hiddenObjects = (await API.viewer.getObjects(undefined, { visible: false })) || [];
+  // ── Scan ───────────────────────────────────────────────────────────────
+  async function scanVisibility() {
+    if (!API) return;
+    log('══ SCAN START ══');
 
-          var nAll = countIds(allObjects);
-          var nVis = countIds(visibleObjects);
-          var nHid = countIds(hiddenObjects);
-
-          addLog("Scan complete — " + nAll + " total, " + nVis + " visible, " + nHid + " hidden", "success");
-
-          // Show results
-          document.getElementById("scanResults").style.display = "block";
-          document.getElementById("scanHint").style.display = "none";
-          document.getElementById("statAll").textContent = nAll;
-          document.getElementById("statVis").textContent = nVis;
-          document.getElementById("statHid").textContent = nHid;
-
-          // Per-model breakdown
-          var $breakdown = document.getElementById("objectBreakdown");
-          $breakdown.innerHTML = visibleObjects.map(function (mo, i) {
-            var nv = mo.objectRuntimeIds ? mo.objectRuntimeIds.length : 0;
-            var nh = hiddenObjects[i] && hiddenObjects[i].objectRuntimeIds
-              ? hiddenObjects[i].objectRuntimeIds.length : 0;
-            var preview = mo.objectRuntimeIds
-              ? "[" + mo.objectRuntimeIds.slice(0, 12).join(", ") + (mo.objectRuntimeIds.length > 12 ? " …" : "") + "]"
-              : "";
-            return '<div class="object-card">' +
-              '<div class="object-model-id">' + escapeHtml(shortId(mo.modelId)) + '</div>' +
-              '<div class="object-counts">' +
-                '<span style="color:var(--green)">' + nv + ' visible</span>' +
-                '<span style="color:var(--red); margin-left:8px;">' + nh + ' hidden</span>' +
-              '</div>' +
-              (preview ? '<div class="id-preview">' + escapeHtml(preview) + '</div>' : '') +
-              '</div>';
-          }).join("");
-
-          updateExportInfo();
-        } catch (err) {
-          addLog("Scan failed: " + err.message, "error");
-        } finally {
-          $btn.textContent = "Scan Visibility";
-          $btn.disabled = false;
-        }
-      }
-
-      // ── Reset visibility ─────────────────────────────────────────────
-      async function resetVisibility() {
-        if (!API) return;
-        try {
-          await API.viewer.setObjectState(undefined, { visible: "reset" });
-          addLog("Object visibility reset to defaults", "success");
-          await scanObjects();
-        } catch (err) {
-          addLog("Reset failed: " + err.message, "error");
-        }
-      }
-
-      // ── Update export info ───────────────────────────────────────────
-      function updateExportInfo() {
-        var $vis = document.getElementById("exportVis");
-        var $hid = document.getElementById("exportHid");
-        var $model = document.getElementById("exportModel");
-        var $btn = document.getElementById("btnExport");
-        if (!$vis) return;
-
-        var nVis = countIds(visibleObjects);
-        var nHid = countIds(hiddenObjects);
-        $vis.textContent = nVis + " objects";
-        $hid.textContent = nHid + " objects";
-        $model.textContent = selectedModel
-          ? (selectedModel.name || shortId(selectedModel.id))
-          : "—";
-
-        if (nVis > 0) {
-          $btn.disabled = false;
-          $btn.textContent = "Export " + nVis + " visible objects → TRB";
-        } else {
-          $btn.disabled = true;
-          $btn.textContent = "Scan objects first";
-        }
-      }
-
-      // ── Export filtered TRB ──────────────────────────────────────────
-      async function exportFilteredTrb() {
-        if (!API || visibleObjects.length === 0) {
-          addLog("Nothing to export — scan objects first", "error");
-          return;
-        }
-
-        var $btn = document.getElementById("btnExport");
-        $btn.textContent = "Exporting...";
-        $btn.disabled = true;
-
-        addLog("═══ Starting filtered TRB export ═══");
-
-        try {
-          for (var v = 0; v < visibleObjects.length; v++) {
-            var modelObj = visibleObjects[v];
-            var modelId = modelObj.modelId;
-            var runtimeIds = modelObj.objectRuntimeIds || [];
-
-            if (runtimeIds.length === 0) {
-              addLog("Model " + shortId(modelId) + ": no visible objects, skipping");
-              continue;
-            }
-
-            addLog("Model " + shortId(modelId) + ": " + runtimeIds.length + " visible objects");
-
-            // Convert runtime IDs → external IDs (IFC GUIDs)
-            var externalIds = null;
-            try {
-              externalIds = await API.viewer.convertToObjectIds(modelId, runtimeIds);
-              addLog("Converted " + externalIds.length + " IDs to IFC GUIDs", "success");
-            } catch (err) {
-              addLog("ID conversion skipped: " + err.message, "warn");
-            }
-
-            // Approach 1: addTrimbimModel with selector filter
-            var filteredId = "export_" + modelId.slice(0, 8) + "_" + Date.now();
-            addLog("Adding filtered TRB (" + filteredId + ")...");
-
-            try {
-              var trbResult = await API.viewer.addTrimbimModel({
-                id: filteredId,
-                trbBlobFromId: modelId,
-                visible: true,
-                fitToView: false,
-                selector: {
-                  modelObjectIds: [{
-                    modelId: modelId,
-                    objectRuntimeIds: runtimeIds
-                  }]
-                }
-              });
-              addLog("Filtered TRB loaded: " + JSON.stringify(trbResult), "success");
-            } catch (err) {
-              addLog("addTrimbimModel failed: " + err.message, "error");
-
-              // Approach 2: isolateEntities
-              addLog("Fallback → isolateEntities...");
-              try {
-                await API.viewer.isolateEntities([{
-                  modelId: modelId,
-                  objectRuntimeIds: runtimeIds
-                }]);
-                addLog("isolateEntities succeeded", "success");
-              } catch (err2) {
-                addLog("isolateEntities also failed: " + err2.message, "error");
-              }
-            }
-
-            // Log some external IDs
-            if (externalIds && externalIds.length > 0) {
-              addLog("IFC GUIDs (first 5): " + externalIds.slice(0, 5).join(", ") +
-                (externalIds.length > 5 ? "..." : ""));
-            }
-          }
-
-          // Snapshot
-          try {
-            var snap = await API.viewer.getSnapshot();
-            addLog("Snapshot captured (" + (snap ? snap.length : 0) + " chars)", "success");
-          } catch (e) { /* non-critical */ }
-
-          addLog("═══ Export complete ═══", "success");
-        } catch (err) {
-          addLog("Export error: " + err.message, "error");
-        } finally {
-          updateExportInfo();
-        }
-      }
-
-      // ── Initialize ───────────────────────────────────────────────────
+    try {
+      // Step 1: getObjects() with NO args
+      log('1) getObjects() — no args...');
+      var rawAll;
       try {
-        addLog("Initializing extension — connecting to Trimble Connect...");
-
-        // Connect to parent (Trimble Connect 3D Viewer)
-        API = await TrimbleConnectWorkspace.connect(
-          window.parent,
-          function (event, data) {
-            // Handle token refresh
-            if (event === "extension.accessToken") {
-              accessToken = data && data.data ? data.data : data;
-              addLog("Access token refreshed via event", "success");
-            }
-            // Handle model state changes
-            if (event === "viewer.modelState.changed") {
-              addLog("Model state changed", "info");
-              API.viewer.getModels("LOADED").then(function (m) {
-                models = m || [];
-                renderModels();
-              });
-            }
-          },
-          30000
-        );
-
-        addLog("Connected to Trimble Connect", "success");
-
-        // Request access token
-        addLog("Requesting access token...");
-        var tokenResult = await API.extension.requestPermission("accesstoken");
-        if (tokenResult === "pending") {
-          addLog("Waiting for user to grant permission...", "warn");
-        } else if (tokenResult === "denied") {
-          throw new Error("User denied access token permission");
-        } else {
-          accessToken = tokenResult;
-          addLog("Access token received", "success");
-        }
-
-        // Get project info
-        var project = await API.project.getProject();
-        $projectName.textContent = project ? (project.name || shortId(project.id)) : "Unknown";
-        addLog("Project: " + (project ? project.name || project.id : "unknown"), "success");
-
-        // Get loaded models
-        models = (await API.viewer.getModels("LOADED")) || [];
-        addLog("Loaded models: " + models.length + " file(s)", "success");
-        if (models.length > 0) {
-          selectedModel = models[0];
-        }
-
-        // Switch to ready state
-        setStatus("ready");
-        showReadyUI();
-
-      } catch (err) {
-        addLog("Connection failed: " + err.message, "error");
-        setStatus("error");
-        $connectingPanel.innerHTML =
-          '<div class="icon" style="color:var(--red);">✕</div>' +
-          '<div class="title">Connection Failed</div>' +
-          '<div class="sub">' + escapeHtml(err.message) + '</div>';
+        rawAll = await API.viewer.getObjects();
+      } catch(e) {
+        log('getObjects() threw: ' + e.message, 'error');
+        rawAll = null;
       }
-    })();
-  </script>
+
+      if (rawAll) {
+        log('   returned type: ' + typeof rawAll + ', isArray: ' + Array.isArray(rawAll) + ', length: ' + (rawAll.length || 'N/A'), 'info');
+        if (rawAll.length > 0) {
+          var f = rawAll[0];
+          log('   [0] keys: ' + Object.keys(f).join(', '), 'info');
+          log('   [0] modelId: ' + f.modelId, 'info');
+          if (f.objects) log('   [0].objects: Array(' + f.objects.length + ')', 'info');
+          if (f.objectRuntimeIds) log('   [0].objectRuntimeIds: Array(' + f.objectRuntimeIds.length + ')', 'info');
+          // Dump first object entry to see its shape
+          if (f.objects && f.objects.length > 0) {
+            log('   [0].objects[0] keys: ' + Object.keys(f.objects[0]).join(', '), 'info');
+          }
+        }
+      } else {
+        log('   result is null/undefined', 'warn');
+      }
+
+      // Step 2: getObjects with visible:true
+      log('2) getObjects(undefined, {visible:true})...');
+      var rawVis;
+      try {
+        rawVis = await API.viewer.getObjects(undefined, { visible: true });
+        log('   → ' + (rawVis ? rawVis.length : 0) + ' entries', 'info');
+      } catch(e) {
+        log('   threw: ' + e.message, 'error');
+        rawVis = null;
+      }
+
+      // Step 3: getObjects with visible:false
+      log('3) getObjects(undefined, {visible:false})...');
+      var rawHid;
+      try {
+        rawHid = await API.viewer.getObjects(undefined, { visible: false });
+        log('   → ' + (rawHid ? rawHid.length : 0) + ' entries', 'info');
+      } catch(e) {
+        log('   threw: ' + e.message, 'error');
+        rawHid = null;
+      }
+
+      // Step 4: getTrimbimModels
+      log('4) getTrimbimModels()...');
+      var trimbims;
+      try {
+        trimbims = await API.viewer.getTrimbimModels();
+        log('   → ' + (trimbims ? trimbims.length : 0) + ' trimbim(s)', 'info');
+        if (trimbims && trimbims.length > 0) {
+          log('   trimbim[0] keys: ' + Object.keys(trimbims[0]).join(', '), 'info');
+          log('   trimbim[0].id: ' + trimbims[0].id, 'info');
+        }
+      } catch(e) {
+        log('   threw: ' + e.message, 'error');
+        trimbims = null;
+      }
+
+      // Step 5: getSelection
+      log('5) getSelection()...');
+      try {
+        var sel = await API.viewer.getSelection();
+        if (sel) {
+          log('   selection type: ' + typeof sel + ', isArray: ' + Array.isArray(sel), 'info');
+          if (Array.isArray(sel) && sel.length > 0) {
+            log('   sel[0] keys: ' + Object.keys(sel[0]).join(', '), 'info');
+          } else if (typeof sel === 'object') {
+            log('   selection keys: ' + Object.keys(sel).join(', '), 'info');
+          }
+        } else {
+          log('   selection: null/empty', 'info');
+        }
+      } catch(e) { log('   threw: ' + e.message, 'warn'); }
+
+      // Step 6: getHierarchyChildren (root level)
+      if (models.length > 0) {
+        var mid = models[0].versionId || models[0].id;
+        log('6) getHierarchyChildren(modelId=' + short(mid) + ', [0])...');
+        try {
+          var hier = await API.viewer.getHierarchyChildren(mid, [0]);
+          log('   → ' + (hier ? hier.length : 0) + ' children', 'info');
+          if (hier && hier.length > 0) {
+            log('   child[0] keys: ' + Object.keys(hier[0]).join(', '), 'info');
+          }
+        } catch(e) { log('   threw: ' + e.message, 'warn'); }
+      }
+
+      // Count objects using the correct property
+      function countArr(arr) {
+        if (!arr || !Array.isArray(arr)) return 0;
+        var n = 0;
+        for (var i = 0; i < arr.length; i++) {
+          var e = arr[i];
+          if (e.objects && Array.isArray(e.objects)) n += e.objects.length;
+          else if (e.objectRuntimeIds && Array.isArray(e.objectRuntimeIds)) n += e.objectRuntimeIds.length;
+        }
+        return n;
+      }
+
+      var nAll = countArr(rawAll);
+      var nVis = countArr(rawVis);
+      var nHid = countArr(rawHid);
+
+      scanData = {
+        all: rawAll || [], visible: rawVis || [], hidden: rawHid || [],
+        nAll: nAll, nVis: nVis, nHid: nHid,
+        trimbims: trimbims || []
+      };
+
+      log('══ SCAN DONE ══ total=' + nAll + ' vis=' + nVis + ' hid=' + nHid, 'success');
+      renderUI();
+    } catch(err) {
+      log('Scan error: ' + err.message, 'error');
+    }
+  }
+
+  // ── Reset ──────────────────────────────────────────────────────────────
+  async function resetVis() {
+    if (!API) return;
+    try {
+      await API.viewer.setObjectState(undefined, { visible: 'reset' });
+      log('Visibility reset', 'success');
+      await scanVisibility();
+    } catch(err) { log('Reset fail: ' + err.message, 'error'); }
+  }
+
+  // ── Export ─────────────────────────────────────────────────────────────
+  async function doExport() {
+    if (!API || !scanData) return;
+    log('══ EXPORT START ══');
+
+    try {
+      // We need visible objects with their runtime IDs per model
+      var entries = scanData.visible;
+      if (!entries || entries.length === 0) {
+        log('No visible entries', 'error'); return;
+      }
+
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var modelId = entry.modelId;
+        log('Processing model: ' + short(modelId));
+
+        // Extract runtime IDs from the entry
+        var rids = [];
+        if (entry.objectRuntimeIds) {
+          rids = entry.objectRuntimeIds;
+        } else if (entry.objects) {
+          for (var j = 0; j < entry.objects.length; j++) {
+            var o = entry.objects[j];
+            // Try various possible property names
+            var rid = o.objectRuntimeId || o.runtimeId || o.entityId || o.id;
+            if (rid != null) rids.push(rid);
+          }
+        }
+        log('  ' + rids.length + ' runtime IDs extracted');
+
+        if (rids.length === 0) continue;
+
+        // isolateEntities to show only these
+        log('  Calling isolateEntities...');
+        try {
+          await API.viewer.isolateEntities([{ modelId: modelId, entityIds: rids }]);
+          log('  isolateEntities OK!', 'success');
+        } catch(e) {
+          log('  isolateEntities fail: ' + e.message, 'error');
+        }
+
+        // Convert to external IDs
+        try {
+          var ext = await API.viewer.convertToObjectIds(modelId, rids.slice(0, 5));
+          log('  IFC GUIDs sample: ' + ext.join(', '), 'success');
+        } catch(e) { log('  convertToObjectIds: ' + e.message, 'warn'); }
+      }
+
+      log('══ EXPORT DONE ══', 'success');
+    } catch(err) { log('Export error: ' + err.message, 'error'); }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  function renderUI() {
+    var h = '';
+
+    // Models
+    h += '<div class="section"><div class="section-title">Models (' + models.length + ')</div>';
+    if (models.length === 0) {
+      h += '<div style="color:var(--dim);font-size:11px;text-align:center;padding:8px 0">No models. Load one in the viewer.</div>';
+    }
+    for (var i = 0; i < models.length; i++) {
+      var m = models[i], sel = selModel && selModel.id === m.id;
+      var sc = m.state === 'LOADED' ? 'var(--green)' : m.state === 'LOADING' ? 'var(--amber)' : 'var(--dim)';
+      h += '<div class="model-item' + (sel ? ' sel' : '') + '" data-i="' + i + '">';
+      h += '<div class="model-name">' + esc(m.name || '?') + '</div>';
+      h += '<div class="model-meta">id: ' + esc(short(m.id)) + ' | ver: ' + esc(short(m.versionId)) + '</div>';
+      h += '<div class="model-meta">state: <span style="color:' + sc + '">' + esc(m.state||'?') + '</span> | type: ' + esc(m.type||'?') + '</div>';
+      h += '</div>';
+    }
+    h += '<button class="btn btn-dim" onclick="window._refresh()">Refresh</button>';
+    h += '</div>';
+
+    // Scan
+    h += '<div class="section"><div class="section-title">Object Visibility</div>';
+    h += '<button class="btn btn-blue" onclick="window._scan()">Scan Visibility</button>';
+    if (scanData) {
+      h += '<div class="stats">';
+      h += '<div class="stat-box"><div class="stat-val" style="color:var(--blue)">' + scanData.nAll + '</div><div class="stat-lbl">Total</div></div>';
+      h += '<div class="stat-box"><div class="stat-val" style="color:var(--green)">' + scanData.nVis + '</div><div class="stat-lbl">Visible</div></div>';
+      h += '<div class="stat-box"><div class="stat-val" style="color:var(--red)">' + scanData.nHid + '</div><div class="stat-lbl">Hidden</div></div>';
+      h += '</div>';
+      // Breakdown per model entry
+      for (var i = 0; i < scanData.all.length; i++) {
+        var e = scanData.all[i];
+        var n = e.objects ? e.objects.length : (e.objectRuntimeIds ? e.objectRuntimeIds.length : '?');
+        h += '<div class="obj-card"><div style="font-size:10px;font-family:var(--mono);color:var(--blue)">modelId: ' + esc(short(e.modelId||'?')) + '</div>';
+        h += '<div style="font-size:11px;margin-top:2px">' + n + ' objects</div></div>';
+      }
+      if (scanData.trimbims.length > 0) {
+        h += '<div style="font-size:10px;color:var(--dim);margin-top:4px">' + scanData.trimbims.length + ' trimbim(s) in viewer</div>';
+      }
+      h += '<button class="btn btn-amber" onclick="window._reset()">Reset Visibility</button>';
+    } else {
+      h += '<div class="hint">Hide objects in the viewer, then scan here to see which are visible vs hidden.</div>';
+    }
+    h += '</div>';
+
+    // Export
+    h += '<div class="section"><div class="section-title">Export</div>';
+    var cv = scanData ? scanData.nVis : 0, ch = scanData ? scanData.nHid : 0;
+    h += '<div class="info-row"><span class="lbl">Include</span><span class="val" style="color:var(--green)">' + cv + '</span></div>';
+    h += '<div class="info-row"><span class="lbl">Exclude</span><span class="val" style="color:var(--red)">' + ch + '</span></div>';
+    h += '<button class="btn btn-green" onclick="window._export()"' + (cv > 0 ? '' : ' disabled') + '>' +
+      (cv > 0 ? 'Isolate ' + cv + ' visible objects' : 'Scan first') + '</button>';
+    h += '</div>';
+
+    // Log
+    h += '<div class="section"><div class="section-title">Log (' + logs.length + ')</div>';
+    h += '<div class="log-box" id="logBox"></div>';
+    if (logs.length > 0) h += '<button class="btn btn-dim" onclick="window._clr()" style="font-size:10px;padding:5px">Clear</button>';
+    h += '</div>';
+
+    $main.innerHTML = h;
+    renderLog();
+
+    // Bind model clicks
+    $main.querySelectorAll('.model-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        selModel = models[parseInt(el.getAttribute('data-i'))];
+        renderUI();
+      });
+    });
+  }
+
+  function renderLog() {
+    var box = document.getElementById('logBox');
+    if (!box) return;
+    var h = '';
+    for (var i = logs.length - 1; i >= Math.max(0, logs.length - 80); i--) {
+      h += '<div class="log-line ' + logs[i].type + '"><span style="opacity:0.4">' + logs[i].ts + '</span> ' + esc(logs[i].msg) + '</div>';
+    }
+    box.innerHTML = h;
+  }
+
+  window._scan = scanVisibility;
+  window._reset = resetVis;
+  window._export = doExport;
+  window._refresh = loadModels;
+  window._clr = function() { logs.length = 0; renderUI(); };
+})();
+</script>
 </body>
 </html>
